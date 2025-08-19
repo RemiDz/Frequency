@@ -62,6 +62,7 @@
             <div class="beat-preset-row">
               <label>Target State:</label>
               <select id="brainwaveSelect">
+                <option value="">Select a brainwave state...</option>
                 <optgroup label="🌙 Sleep & Rest">
                   <option value="deep_sleep">Deep Sleep (0.5 Hz) - Profound Rest</option>
                   <option value="delta">Delta Sleep (2 Hz) - Healing Sleep</option>
@@ -96,10 +97,9 @@
                   <option value="energy">Energy Boost (22 Hz) - Mental Alertness</option>
                 </optgroup>
               </select>
-              <button id="applyBrainwave">Apply</button>
             </div>
             <div class="beat-info" id="beatInfo">
-              Select a brainwave state to automatically set frequencies for optimal binaural beats
+              Select a brainwave state to automatically set frequencies and start playing optimal binaural beats
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@
               <button id="applyToBoth">→ Both</button>
             </div>
             <div class="freq-info" id="freqInfo">
-              Choose a frequency to learn about its properties and applications
+              Choose a frequency to automatically apply to both channels and start playing
             </div>
           </div>
         </div>
