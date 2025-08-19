@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sound Frequency Analyzer • Dual Tone Spectrum + Aura</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Sound Frequency Analyzer</h1>
+      <div>Dual frequencies • spectrum • chakra‑aura mapping</div>
+    </header>
+    
+    <div class="main-layout">
+      <!-- Master Controls - Compact Top Bar -->
+      <div class="master-controls-compact">
+        <div class="master-left">
+          <div class="master-buttons">
+            <button id="masterPlay">▶ Play Both</button>
+            <button id="masterStop">⏸ Stop Both</button>
+          </div>
+        </div>
+        <div class="master-center">
+          <h4>🎛️ Master Controls</h4>
+        </div>
+        <div class="master-right">
+          <div class="master-gain-control">
+            <label>Master Gain</label>
+            <input type="range" id="masterGain" min="0" max="100" value="100">
+            <span id="masterGainVal">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Features Panel -->
+      <div class="features-row">
+        <!-- Session Timer -->
+        <div class="feature-section">
+          <h4>🕐 Session Timer</h4>
+          <div class="timer-controls">
+            <div class="timer-display" id="timerDisplay">00:00</div>
+            <div class="timer-buttons">
+              <button id="timerStart">Start</button>
+              <button id="timerPause">Pause</button>
+              <button id="timerReset">Reset</button>
+            </div>
+            <div class="timer-presets">
+              <button onclick="setTimer(5)">5m</button>
+              <button onclick="setTimer(10)">10m</button>
+              <button onclick="setTimer(20)">20m</button>
+              <button onclick="setTimer(30)">30m</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Binaural Beat Calculator -->
+        <div class="feature-section">
+          <h4>🧠 Binaural Beat Helper</h4>
+          <div class="beat-calculator">
+            <div class="beat-preset-row">
+              <label>Target State:</label>
+              <select id="brainwaveSelect">
+                <optgroup label="🌙 Sleep & Rest">
+                  <option value="deep_sleep">Deep Sleep (0.5 Hz) - Profound Rest</option>
+                  <option value="delta">Delta Sleep (2 Hz) - Healing Sleep</option>
+                  <option value="delta_healing">Delta Healing (3 Hz) - Physical Repair</option>
+                </optgroup>
+                <optgroup label="🧘 Meditation & Spirituality">
+                  <option value="theta_deep">Deep Theta (4 Hz) - Deep Meditation</option>
+                  <option value="theta">Theta (6 Hz) - Meditation & Creativity</option>
+                  <option value="theta_intuition">Theta Intuition (7.5 Hz) - Psychic Awareness</option>
+                  <option value="schumann">Schumann (7.83 Hz) - Earth Connection</option>
+                </optgroup>
+                <optgroup label="😌 Relaxation & Calm">
+                  <option value="alpha_deep">Deep Alpha (8 Hz) - Deep Relaxation</option>
+                  <option value="alpha">Alpha (10 Hz) - Calm Focus</option>
+                  <option value="alpha_learning">Alpha Learning (12 Hz) - Accelerated Learning</option>
+                </optgroup>
+                <optgroup label="🎯 Focus & Productivity">
+                  <option value="beta_low">Low Beta (14 Hz) - Relaxed Focus</option>
+                  <option value="beta">Beta (20 Hz) - Active Concentration</option>
+                  <option value="beta_high">High Beta (25 Hz) - Peak Performance</option>
+                </optgroup>
+                <optgroup label="🧠 Advanced States">
+                  <option value="gamma_low">Low Gamma (35 Hz) - Enhanced Awareness</option>
+                  <option value="gamma">Gamma (40 Hz) - Cognitive Enhancement</option>
+                  <option value="gamma_high">High Gamma (60 Hz) - Expanded Consciousness</option>
+                </optgroup>
+                <optgroup label="💊 Therapeutic">
+                  <option value="pain_relief">Pain Relief (1.5 Hz) - Natural Analgesia</option>
+                  <option value="stress_relief">Stress Relief (9 Hz) - Anxiety Reduction</option>
+                  <option value="memory">Memory Enhancement (15 Hz) - Cognitive Boost</option>
+                  <option value="mood_boost">Mood Enhancement (18 Hz) - Emotional Balance</option>
+                  <option value="energy">Energy Boost (22 Hz) - Mental Alertness</option>
+                </optgroup>
+              </select>
+              <button id="applyBrainwave">Apply</button>
+            </div>
+            <div class="beat-info" id="beatInfo">
+              Select a brainwave state to automatically set frequencies for optimal binaural beats
+            </div>
+          </div>
+        </div>
+
+        <!-- Frequency Presets -->
+        <div class="feature-section">
+          <h4>📚 Frequency Library</h4>
+          <div class="frequency-library">
+            <select id="freqPresetSelect">
+              <option value="">Select a frequency...</option>
+              <option value="schumann">Schumann Resonance (7.83 Hz)</option>
+              <option value="om">OM Frequency (136.1 Hz)</option>
+              <option value="golden">Golden Ratio (1.618 Hz)</option>
+              <option value="dna_repair">DNA Repair (528 Hz)</option>
+              <option value="love">Love Frequency (528 Hz)</option>
+              <option value="transformation">Transformation (741 Hz)</option>
+              <option value="intuition">Intuition (852 Hz)</option>
+              <option value="pineal">Pineal Activation (963 Hz)</option>
+            </select>
+            <div class="preset-buttons">
+              <button id="applyToA">→ Channel A</button>
+              <button id="applyToB">→ Channel B</button>
+              <button id="applyToBoth">→ Both</button>
+            </div>
+            <div class="freq-info" id="freqInfo">
+              Choose a frequency to learn about its properties and applications
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Channels Section -->
+      <div class="channels-row">
+        <!-- Channel A -->
+        <div class="controls-section">
+          <div class="section" id="chanA">
+            <h3>Channel A 🔊 Left</h3>
+            <div class="channel-controls">
+              <div class="knob-section">
+                <div class="knob" id="knobA">
+                  <div class="indicator" id="indicatorA"></div>
+                  <div class="scale" id="scaleA"></div>
+                </div>
+                <div class="hz-input">
+                  <input type="number" id="hzInputA" value="440" min="1" max="20000" step="0.1">
+                  <span>Hz</span>
+                </div>
+                <div class="btns">
+                  <button id="playA">▶ Play</button>
+                  <button id="stopA">⏸ Stop</button>
+                  <button id="muteA">🔇 Mute</button>
+                </div>
+              </div>
+              <div class="settings-container">
+                <div class="controls-row">
+                  <div class="setting-item">
+                    <label>Min Hz</label>
+                    <input type="range" id="minA" min="1" max="1000" value="20">
+                    <span id="minAVal">20</span>
+                  </div>
+                  <div class="setting-item">
+                    <label>Max Hz</label>
+                    <input type="range" id="maxA" min="500" max="20000" value="8000">
+                    <span id="maxAVal">8000</span>
+                  </div>
+                  <div class="setting-item">
+                    <label>Gain</label>
+                    <input type="range" id="gainA" min="0" max="100" value="20">
+                    <span id="gainAVal">20%</span>
+                  </div>
+                </div>
+                <div class="chakra-section">
+                  <div class="chakra-controls-row">
+                    <div class="chakra-control">
+                      <label>Chakra System</label>
+                      <select id="mapSelectA" class="chakra-select">
+                        <option value="standard" selected>Standard Chakras</option>
+                        <option value="solfeggio_528_heart">Solfeggio • Heart</option>
+                        <option value="solfeggio_528_solar">Solfeggio • Solar</option>
+                        <option value="harmonic_A">Harmonic A-series</option>
+                        <option value="c_major">C-Major Scale</option>
+                      </select>
+                    </div>
+                    <div class="chakra-control">
+                      <label>Wave Type</label>
+                      <select id="waveTypeA" class="wave-select">
+                        <option value="sine" selected>Sine</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="chakra-buttons" id="chakraBtnsA"></div>
+                  <div class="frequency-indicator">
+                    <div class="freq-bar-container">
+                      <div class="freq-bar" id="freqBarA">
+                        <div class="freq-history" id="freqHistoryA"></div>
+                        <div class="freq-marker" id="freqMarkerA"></div>
+                        <div class="freq-value-display" id="freqDisplayA">440.0 Hz</div>
+                      </div>
+                      <div class="freq-scale">
+                        <span class="freq-scale-min" id="freqScaleMinA">20</span>
+                        <span class="freq-scale-center" id="freqScaleCenterA">4010</span>
+                        <span class="freq-scale-max" id="freqScaleMaxA">8000</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Audio Effects Section -->
+                  <div class="effects-section">
+                    <div class="effects-header">
+                      <label>🎛️ Audio Effects</label>
+                      <button class="effects-toggle" id="effectsToggleA">Show</button>
+                    </div>
+                    <div class="effects-controls" id="effectsControlsA">
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Reverb</label>
+                          <input type="range" id="reverbA" min="0" max="100" value="0">
+                          <span id="reverbAVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Room Size</label>
+                          <input type="range" id="roomSizeA" min="0" max="100" value="50">
+                          <span id="roomSizeAVal">50%</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Delay</label>
+                          <input type="range" id="delayA" min="0" max="100" value="0">
+                          <span id="delayAVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Delay Time</label>
+                          <input type="range" id="delayTimeA" min="50" max="1000" value="250">
+                          <span id="delayTimeAVal">250ms</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Filter</label>
+                          <select id="filterTypeA">
+                            <option value="none">None</option>
+                            <option value="lowpass">Low Pass</option>
+                            <option value="highpass">High Pass</option>
+                            <option value="bandpass">Band Pass</option>
+                          </select>
+                        </div>
+                        <div class="effect-control">
+                          <label>Cutoff</label>
+                          <input type="range" id="filterFreqA" min="100" max="8000" value="2000">
+                          <span id="filterFreqAVal">2000Hz</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Chorus</label>
+                          <input type="range" id="chorusA" min="0" max="100" value="0">
+                          <span id="chorusAVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Distortion</label>
+                          <input type="range" id="distortionA" min="0" max="100" value="0">
+                          <span id="distortionAVal">0%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel B -->
+        <div class="controls-section">
+          <div class="section" id="chanB">
+            <h3>Channel B 🔊 Right</h3>
+            <div class="channel-controls">
+              <div class="knob-section">
+                <div class="knob" id="knobB">
+                  <div class="indicator" id="indicatorB"></div>
+                  <div class="scale" id="scaleB"></div>
+                </div>
+                <div class="hz-input">
+                  <input type="number" id="hzInputB" value="528" min="1" max="20000" step="0.1">
+                  <span>Hz</span>
+                </div>
+                <div class="btns">
+                  <button id="playB">▶ Play</button>
+                  <button id="stopB">⏸ Stop</button>
+                  <button id="muteB">🔇 Mute</button>
+                </div>
+              </div>
+              <div class="settings-container">
+                <div class="controls-row">
+                  <div class="setting-item">
+                    <label>Min Hz</label>
+                    <input type="range" id="minB" min="1" max="1000" value="20">
+                    <span id="minBVal">20</span>
+                  </div>
+                  <div class="setting-item">
+                    <label>Max Hz</label>
+                    <input type="range" id="maxB" min="500" max="20000" value="8000">
+                    <span id="maxBVal">8000</span>
+                  </div>
+                  <div class="setting-item">
+                    <label>Gain</label>
+                    <input type="range" id="gainB" min="0" max="100" value="20">
+                    <span id="gainBVal">20%</span>
+                  </div>
+                </div>
+                <div class="chakra-section">
+                  <div class="chakra-controls-row">
+                    <div class="chakra-control">
+                      <label>Chakra System</label>
+                      <select id="mapSelectB" class="chakra-select">
+                        <option value="standard" selected>Standard Chakras</option>
+                        <option value="solfeggio_528_heart">Solfeggio • Heart</option>
+                        <option value="solfeggio_528_solar">Solfeggio • Solar</option>
+                        <option value="harmonic_A">Harmonic A-series</option>
+                        <option value="c_major">C-Major Scale</option>
+                      </select>
+                    </div>
+                    <div class="chakra-control">
+                      <label>Wave Type</label>
+                      <select id="waveTypeB" class="wave-select">
+                        <option value="sine" selected>Sine</option>
+                        <option value="square">Square</option>
+                        <option value="sawtooth">Sawtooth</option>
+                        <option value="triangle">Triangle</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="chakra-buttons" id="chakraBtnsB"></div>
+                  <div class="frequency-indicator">
+                    <div class="freq-bar-container">
+                      <div class="freq-bar" id="freqBarB">
+                        <div class="freq-history" id="freqHistoryB"></div>
+                        <div class="freq-marker" id="freqMarkerB"></div>
+                        <div class="freq-value-display" id="freqDisplayB">528.0 Hz</div>
+                      </div>
+                      <div class="freq-scale">
+                        <span class="freq-scale-min" id="freqScaleMinB">20</span>
+                        <span class="freq-scale-center" id="freqScaleCenterB">4010</span>
+                        <span class="freq-scale-max" id="freqScaleMaxB">8000</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Audio Effects Section -->
+                  <div class="effects-section">
+                    <div class="effects-header">
+                      <label>🎛️ Audio Effects</label>
+                      <button class="effects-toggle" id="effectsToggleB">Show</button>
+                    </div>
+                    <div class="effects-controls" id="effectsControlsB">
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Reverb</label>
+                          <input type="range" id="reverbB" min="0" max="100" value="0">
+                          <span id="reverbBVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Room Size</label>
+                          <input type="range" id="roomSizeB" min="0" max="100" value="50">
+                          <span id="roomSizeBVal">50%</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Delay</label>
+                          <input type="range" id="delayB" min="0" max="100" value="0">
+                          <span id="delayBVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Delay Time</label>
+                          <input type="range" id="delayTimeB" min="50" max="1000" value="250">
+                          <span id="delayTimeBVal">250ms</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Filter</label>
+                          <select id="filterTypeB">
+                            <option value="none">None</option>
+                            <option value="lowpass">Low Pass</option>
+                            <option value="highpass">High Pass</option>
+                            <option value="bandpass">Band Pass</option>
+                          </select>
+                        </div>
+                        <div class="effect-control">
+                          <label>Cutoff</label>
+                          <input type="range" id="filterFreqB" min="100" max="8000" value="2000">
+                          <span id="filterFreqBVal">2000Hz</span>
+                        </div>
+                      </div>
+                      <div class="effects-row">
+                        <div class="effect-control">
+                          <label>Chorus</label>
+                          <input type="range" id="chorusB" min="0" max="100" value="0">
+                          <span id="chorusBVal">0%</span>
+                        </div>
+                        <div class="effect-control">
+                          <label>Distortion</label>
+                          <input type="range" id="distortionB" min="0" max="100" value="0">
+                          <span id="distortionBVal">0%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Split visualization panels -->
+      <div class="visualization-row">
+        <div class="visualization-section">
+          <h4>Channel A - Left Speaker</h4>
+          <canvas id="viewA" width="550" height="400"></canvas>
+          <div class="hud" id="hudA"></div>
+        </div>
+        <div class="beat-indicator" id="beatIndicator">
+          <div class="beat-display">
+            <div id="beatFreqDisplay">0.0 Hz</div>
+            <div id="beatLabel">Beat Frequency</div>
+          </div>
+        </div>
+        <div class="visualization-section">
+          <h4>Channel B - Right Speaker</h4>
+          <canvas id="viewB" width="550" height="400"></canvas>
+          <div class="hud" id="hudB"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>
