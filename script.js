@@ -234,23 +234,31 @@
       }
     };
     
-    // Touch events for mobile support
+    // Touch events for mobile support with improved responsiveness
     freqBar.ontouchstart = (e) => {
       isDragging = true;
+      freqBar.style.cursor = 'grabbing';
       const touch = e.touches[0];
       updateFrequencyFromPosition(touch);
       e.preventDefault();
+      e.stopPropagation();
     };
     
     document.ontouchmove = (e) => {
       if (isDragging && e.touches[0]) {
         updateFrequencyFromPosition(e.touches[0]);
         e.preventDefault();
+        e.stopPropagation();
       }
     };
     
-    document.ontouchend = () => {
-      isDragging = false;
+    document.ontouchend = (e) => {
+      if (isDragging) {
+        isDragging = false;
+        freqBar.style.cursor = 'pointer';
+        e.preventDefault();
+        e.stopPropagation();
+      }
     };
   }
   
@@ -337,8 +345,59 @@
   }
 
   function wireKnob(knobEl, which){
-    let dragging=false; knobEl.onpointerdown=e=>{dragging=true;knobEl.setPointerCapture(e.pointerId)}; knobEl.onpointerup=()=>dragging=false;
-    knobEl.onpointermove=e=>{ if(!dragging) return; const s=chan[which]; const r=knobEl.getBoundingClientRect(); const cx=r.left+r.width/2, cy=r.top+r.height/2; const ang=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90; const clamped=Math.max(-135,Math.min(135,ang)); setValue(which, angleToValue(clamped, s.min, s.max)); };
+    let dragging=false;
+    
+    // Pointer events for better touch support
+    knobEl.onpointerdown=e=>{
+      dragging=true;
+      knobEl.setPointerCapture(e.pointerId);
+      e.preventDefault(); // Prevent scrolling on touch
+    };
+    
+    knobEl.onpointerup=()=>{
+      dragging=false;
+    };
+    
+    knobEl.onpointermove=e=>{
+      if(!dragging) return;
+      e.preventDefault(); // Prevent scrolling on touch
+      const s=chan[which];
+      const r=knobEl.getBoundingClientRect();
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      const ang=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
+      const clamped=Math.max(-135,Math.min(135,ang));
+      setValue(which, angleToValue(clamped, s.min, s.max));
+    };
+    
+    // Additional touch events for better mobile support
+    knobEl.ontouchstart=e=>{
+      dragging=true;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const s=chan[which];
+      const r=knobEl.getBoundingClientRect();
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      const ang=Math.atan2(touch.clientY-cy,touch.clientX-cx)*180/Math.PI+90;
+      const clamped=Math.max(-135,Math.min(135,ang));
+      setValue(which, angleToValue(clamped, s.min, s.max));
+    };
+    
+    knobEl.ontouchmove=e=>{
+      if(!dragging) return;
+      e.preventDefault();
+      const touch = e.touches[0];
+      const s=chan[which];
+      const r=knobEl.getBoundingClientRect();
+      const cx=r.left+r.width/2, cy=r.top+r.height/2;
+      const ang=Math.atan2(touch.clientY-cy,touch.clientX-cx)*180/Math.PI+90;
+      const clamped=Math.max(-135,Math.min(135,ang));
+      setValue(which, angleToValue(clamped, s.min, s.max));
+    };
+    
+    knobEl.ontouchend=e=>{
+      dragging=false;
+      e.preventDefault();
+    };
   }
   wireKnob(knobA,'A'); wireKnob(knobB,'B');
 
@@ -1086,6 +1145,23 @@
     }
   };
   
+  // Auto-apply and play when binaural beat selection changes
+  document.getElementById('brainwaveSelect').onchange = () => {
+    const selected = document.getElementById('brainwaveSelect').value;
+    if (selected && brainwavePresets[selected]) {
+      const preset = brainwavePresets[selected];
+      setValue('A', preset.base);
+      setValue('B', preset.base + preset.beat);
+      document.getElementById('beatInfo').textContent = preset.info;
+      
+      // Auto-start playing both channels
+      ensureAudio();
+      document.getElementById('playA').click();
+      document.getElementById('playB').click();
+    }
+  };
+
+  // Keep the apply button for manual triggering if needed
   document.getElementById('applyBrainwave').onclick = () => {
     const selected = document.getElementById('brainwaveSelect').value;
     if (selected && brainwavePresets[selected]) {
@@ -1093,6 +1169,11 @@
       setValue('A', preset.base);
       setValue('B', preset.base + preset.beat);
       document.getElementById('beatInfo').textContent = preset.info;
+      
+      // Auto-start playing both channels
+      ensureAudio();
+      document.getElementById('playA').click();
+      document.getElementById('playB').click();
     }
   };
 
@@ -1139,8 +1220,18 @@
     selectedFreqPreset = selected;
     if (selected && frequencyPresets[selected]) {
       document.getElementById('freqInfo').textContent = frequencyPresets[selected].info;
+      
+      // Auto-apply to both channels and start playing
+      const freq = frequencyPresets[selected].freq;
+      setValue('A', freq);
+      setValue('B', freq);
+      
+      // Auto-start playing both channels
+      ensureAudio();
+      document.getElementById('playA').click();
+      document.getElementById('playB').click();
     } else {
-      document.getElementById('freqInfo').textContent = 'Choose a frequency to learn about its properties and applications';
+      document.getElementById('freqInfo').textContent = 'Choose a frequency to automatically apply to both channels and start playing';
     }
   };
   
