@@ -253,14 +253,15 @@
     }
   }
 
-  // Hz Mouse Wheel Implementation
+  // Hz Roller Implementation (texture scroll)
   function setupHzMouseWheel(element, channel) {
     let startY = 0;
     let startValue = 0;
     let isDragging = false;
     let lastTickTime = 0;
+    let wheelOffset = -1000; // matches CSS top for tall texture
     
-    const wheelBody = element.querySelector('.wheel-body');
+    const wheelBody = element.querySelector('.roller-wheel') || element.querySelector('.wheel-body');
     let currentRotation = 0;
     
     // Calculate increment based on frequency range
@@ -273,18 +274,14 @@
     }
     
     // Animate wheel rotation
-    function animateWheelRotation(direction) {
-      const rotationAmount = direction > 0 ? 15 : -15;
-      currentRotation += rotationAmount;
-      
-      if (wheelBody) {
-        wheelBody.style.transform = `rotate(${currentRotation}deg)`;
-        wheelBody.classList.add('wheel-rotating');
-        
-        setTimeout(() => {
-          wheelBody.classList.remove('wheel-rotating');
-        }, 200);
-      }
+    function animateWheelRotation(direction, steps) {
+      if (!wheelBody) return;
+      const pxPerStep = 6;
+      const delta = (direction > 0 ? -1 : 1) * pxPerStep * (steps || 1);
+      wheelOffset += delta;
+      if (wheelOffset > -100) wheelOffset = -1000;
+      if (wheelOffset < -1900) wheelOffset = -1000;
+      wheelBody.style.top = wheelOffset + 'px';
     }
     
     // Play tick sound with throttling
@@ -340,7 +337,7 @@
         startY = currentY; // Update start position for continuous scrolling
         startValue = chan[channel].value;
         
-        animateWheelRotation(direction);
+        animateWheelRotation(direction, steps);
         playTick();
         
         clearBinauralSelections();
@@ -381,7 +378,7 @@
           startY = currentY;
           startValue = chan[channel].value;
           
-          animateWheelRotation(direction);
+          animateWheelRotation(direction, steps);
           playTick();
           
           clearBinauralSelections();
