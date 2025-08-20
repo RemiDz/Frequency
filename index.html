@@ -172,37 +172,137 @@
       <div class="master-section">
         <h4>📚 Frequency Library</h4>
         <div class="frequency-library">
-          <select id="freqPresetSelect">
-            <option value="">Select a frequency...</option>
-            <option value="schumann">Schumann Resonance (7.83 Hz)</option>
-            <option value="om">OM Frequency (136.1 Hz)</option>
-            <option value="golden">Golden Ratio (1.618 Hz)</option>
-            <option value="dna_repair">DNA Repair (528 Hz)</option>
-            <option value="love">Love Frequency (528 Hz)</option>
-            <option value="transformation">Transformation (741 Hz)</option>
-            <option value="intuition">Intuition (852 Hz)</option>
-            <option value="pineal">Pineal Activation (963 Hz)</option>
-          </select>
+          <div class="frequency-categories">
+            <!-- Solfeggio Frequencies -->
+            <div class="freq-category">
+              <label>🎵 Solfeggio Scale</label>
+              <select id="solfeggioSelect" class="freq-select">
+                <option value="">Choose Solfeggio frequency...</option>
+                <option value="ut_174">Ut - 174 Hz - Pain Relief & Security</option>
+                <option value="re_285">Re - 285 Hz - Healing & Regeneration</option>
+                <option value="mi_396">Mi - 396 Hz - Liberation from Fear</option>
+                <option value="fa_417">Fa - 417 Hz - Undoing Situations</option>
+                <option value="sol_528">Sol - 528 Hz - Love & DNA Repair</option>
+                <option value="la_639">La - 639 Hz - Connecting Relationships</option>
+                <option value="ti_741">Ti - 741 Hz - Awakening Intuition</option>
+                <option value="do_852">Do - 852 Hz - Returning to Spirit</option>
+                <option value="high_963">High - 963 Hz - Divine Connection</option>
+              </select>
+            </div>
+
+            <!-- Planetary Frequencies -->
+            <div class="freq-category">
+              <label>🪐 Planetary Frequencies</label>
+              <select id="planetarySelect" class="freq-select">
+                <option value="">Choose planetary frequency...</option>
+                <option value="earth_day">Earth Day - 194.18 Hz - Grounding</option>
+                <option value="earth_year">Earth Year - 136.1 Hz - OM Frequency</option>
+                <option value="moon">Moon - 210.42 Hz - Intuition & Cycles</option>
+                <option value="mercury">Mercury - 141.27 Hz - Communication</option>
+                <option value="venus">Venus - 221.23 Hz - Love & Beauty</option>
+                <option value="mars">Mars - 144.72 Hz - Energy & Action</option>
+                <option value="jupiter">Jupiter - 183.58 Hz - Growth & Wisdom</option>
+                <option value="saturn">Saturn - 147.85 Hz - Structure & Discipline</option>
+                <option value="uranus">Uranus - 207.36 Hz - Innovation & Change</option>
+                <option value="neptune">Neptune - 211.44 Hz - Spirituality & Dreams</option>
+                <option value="pluto">Pluto - 140.25 Hz - Transformation</option>
+              </select>
+            </div>
+
+            <!-- Healing & Therapeutic -->
+            <div class="freq-category">
+              <label>💊 Healing & Therapeutic</label>
+              <select id="healingSelect" class="freq-select">
+                <option value="">Choose healing frequency...</option>
+                <option value="pain_relief_40">Pain Relief - 40 Hz - Endorphin Release</option>
+                <option value="inflammation_728">Anti-Inflammatory - 728 Hz - Reduces Swelling</option>
+                <option value="immune_boost_465">Immune Boost - 465 Hz - System Strengthening</option>
+                <option value="cellular_repair_285">Cellular Repair - 285 Hz - Tissue Regeneration</option>
+                <option value="detox_727">Detoxification - 727.5 Hz - Cleansing</option>
+                <option value="circulation_20">Blood Circulation - 20 Hz - Flow Enhancement</option>
+                <option value="muscle_relax_304">Muscle Relaxation - 304 Hz - Tension Release</option>
+                <option value="nerve_regen_2720">Nerve Regeneration - 2720 Hz - Neural Healing</option>
+              </select>
+            </div>
+
+            <!-- Musical Notes (A4 = 440Hz) -->
+            <div class="freq-category">
+              <label>🎼 Musical Notes (4th Octave)</label>
+              <select id="musicalSelect" class="freq-select">
+                <option value="">Choose musical note...</option>
+                <option value="c4">C4 - 261.63 Hz - Root Chakra Tone</option>
+                <option value="cs4">C#4 - 277.18 Hz</option>
+                <option value="d4">D4 - 293.66 Hz - Sacral Chakra Tone</option>
+                <option value="ds4">D#4 - 311.13 Hz</option>
+                <option value="e4">E4 - 329.63 Hz - Solar Plexus Tone</option>
+                <option value="f4">F4 - 349.23 Hz - Heart Chakra Tone</option>
+                <option value="fs4">F#4 - 369.99 Hz</option>
+                <option value="g4">G4 - 392.00 Hz - Throat Chakra Tone</option>
+                <option value="gs4">G#4 - 415.30 Hz</option>
+                <option value="a4">A4 - 440.00 Hz - Concert Pitch</option>
+                <option value="as4">A#4 - 466.16 Hz</option>
+                <option value="b4">B4 - 493.88 Hz - Crown Chakra Tone</option>
+              </select>
+            </div>
+
+            <!-- Sacred & Ancient -->
+            <div class="freq-category">
+              <label>🕉️ Sacred & Ancient</label>
+              <select id="sacredSelect" class="freq-select">
+                <option value="">Choose sacred frequency...</option>
+                <option value="schumann">Schumann Resonance - 7.83 Hz - Earth's Heartbeat</option>
+                <option value="golden_ratio">Golden Ratio - 1.618 Hz - Divine Proportion</option>
+                <option value="fibonacci_89">Fibonacci - 89 Hz - Natural Harmony</option>
+                <option value="pyramid_51">Great Pyramid - 51.8 Hz - Ancient Wisdom</option>
+                <option value="crystal_bowls_432">Crystal Bowls - 432 Hz - Universal Harmony</option>
+                <option value="tibetan_singing">Tibetan Singing - 256 Hz - Meditation</option>
+                <option value="om_chant">OM Chant - 136.1 Hz - Sacred Sound</option>
+                <option value="angels_111">Angel Frequency - 111 Hz - Divine Connection</option>
+              </select>
+            </div>
+
+            <!-- Brainwave Entrainment -->
+            <div class="freq-category">
+              <label>🧠 Brainwave Entrainment</label>
+              <select id="brainwaveSelect" class="freq-select">
+                <option value="">Choose brainwave frequency...</option>
+                <option value="delta_1">Delta - 1 Hz - Deep Sleep</option>
+                <option value="delta_2">Delta - 2 Hz - Healing Sleep</option>
+                <option value="theta_4">Theta - 4 Hz - Deep Meditation</option>
+                <option value="theta_6">Theta - 6 Hz - Creativity</option>
+                <option value="alpha_8">Alpha - 8 Hz - Relaxation</option>
+                <option value="alpha_10">Alpha - 10 Hz - Calm Focus</option>
+                <option value="beta_14">Beta - 14 Hz - Concentration</option>
+                <option value="beta_20">Beta - 20 Hz - Active Thinking</option>
+                <option value="gamma_40">Gamma - 40 Hz - Heightened Awareness</option>
+                <option value="gamma_70">Gamma - 70 Hz - Cognitive Enhancement</option>
+              </select>
+            </div>
+          </div>
 
           <div class="freq-info" id="freqInfo">
-            Choose a frequency to automatically apply to both channels and start playing
+            Choose a frequency from any category to automatically apply to both channels and start playing
           </div>
         </div>
       </div>
 
-      <!-- Channels Section -->
-      <div class="channels-row">
-        <!-- Channel A -->
+      <!-- Channel Controls Section -->
+      <div class="channel-controls-row">
+        <!-- Beat Indicator - Floating in Center -->
+        <div class="beat-indicator-floating" id="beatIndicator">
+          <div class="beat-display">
+            <div class="beat-text">
+              <div id="beatFreqDisplay">0.0 Hz</div>
+              <div id="beatLabel">Beat Frequency</div>
+            </div>
+          </div>
+        </div>
+        <!-- Channel A Controls -->
         <div class="controls-section">
           <div class="section" id="chanA">
             <h3>Channel A 🔊 Left</h3>
             <div class="channel-controls">
               <div class="simple-controls">
-                <div class="setting-item">
-                  <label>Gain</label>
-                  <input type="range" id="gainA" min="0" max="100" value="20">
-                  <span id="gainAVal">20%</span>
-                </div>
                 <div class="hz-roller" id="hzWheelA">
                   <div class="roller-frame">
                     <div class="roller-slot">
@@ -220,17 +320,12 @@
           </div>
         </div>
 
-        <!-- Channel B -->
+        <!-- Channel B Controls -->
         <div class="controls-section">
           <div class="section" id="chanB">
             <h3>Channel B 🔊 Right</h3>
             <div class="channel-controls">
               <div class="simple-controls">
-                <div class="setting-item">
-                  <label>Gain</label>
-                  <input type="range" id="gainB" min="0" max="100" value="20">
-                  <span id="gainBVal">20%</span>
-                </div>
                 <div class="hz-roller" id="hzWheelB">
                   <div class="roller-frame">
                     <div class="roller-slot">
@@ -249,22 +344,19 @@
         </div>
       </div>
 
-      <!-- Split visualization panels -->
-      <div class="visualization-row">
-        <div class="visualization-section">
+      <!-- Channel Visualizations Section -->
+      <div class="visualizations-row">
+        <!-- Channel A Visualization -->
+        <div class="channel-visualization">
           <h4>Channel A - Left Speaker</h4>
-          <canvas id="viewA" width="550" height="400"></canvas>
+          <canvas id="viewA" width="550" height="300"></canvas>
           <div class="hud" id="hudA"></div>
         </div>
-        <div class="beat-indicator" id="beatIndicator">
-          <div class="beat-display">
-            <div id="beatFreqDisplay">0.0 Hz</div>
-            <div id="beatLabel">Beat Frequency</div>
-          </div>
-        </div>
-        <div class="visualization-section">
+
+        <!-- Channel B Visualization -->
+        <div class="channel-visualization">
           <h4>Channel B - Right Speaker</h4>
-          <canvas id="viewB" width="550" height="400"></canvas>
+          <canvas id="viewB" width="550" height="300"></canvas>
           <div class="hud" id="hudB"></div>
         </div>
       </div>
