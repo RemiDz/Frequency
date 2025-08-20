@@ -91,11 +91,13 @@
   };
 
   // Elements for A
-  const hzInputA=document.getElementById('hzInputA');
+  const hzWheelA=document.getElementById('hzWheelA');
+  const hzValueA=document.getElementById('hzValueA');
   const gA=document.getElementById('gainA');
   const gainAVal=document.getElementById('gainAVal');
   // Elements for B
-  const hzInputB=document.getElementById('hzInputB');
+  const hzWheelB=document.getElementById('hzWheelB');
+  const hzValueB=document.getElementById('hzValueB');
   const gB=document.getElementById('gainB');
   const gainBVal=document.getElementById('gainBVal');
 
@@ -108,14 +110,14 @@
     s.value = Math.max(1, Math.min(20000, v));
     console.log(`Setting ${which} to ${s.value} Hz`);
     if(which==='A'){ 
-      hzInputA.value=s.value.toFixed(1); 
+      hzValueA.textContent=s.value.toFixed(1); 
       if(oscA) {
         oscA.frequency.value=s.value;
         console.log('Updated oscA frequency to', s.value);
       }
     }
     else { 
-      hzInputB.value=s.value.toFixed(1); 
+      hzValueB.textContent=s.value.toFixed(1); 
       if(oscB) {
         oscB.frequency.value=s.value;
         console.log('Updated oscB frequency to', s.value);
@@ -210,17 +212,164 @@
 
 
 
-  // Hz input handlers
-  hzInputA.oninput=()=>{ 
-    clearBinauralSelections();
-    clearFrequencyLibrarySelection();
-    setValue('A', +hzInputA.value); 
-  };
-  hzInputB.oninput=()=>{ 
-    clearBinauralSelections();
-    clearFrequencyLibrarySelection();
-    setValue('B', +hzInputB.value); 
-  };
+  // Hz Scroll Wheel Implementation
+  function setupHzScrollWheel(element, channel) {
+    let startY = 0;
+    let startValue = 0;
+    let isDragging = false;
+    let animationFrame = null;
+    
+    // Calculate increment based on frequency range
+    function getIncrement(currentValue) {
+      if (currentValue < 20) return 0.1;
+      if (currentValue < 100) return 0.5;
+      if (currentValue < 1000) return 1;
+      if (currentValue < 5000) return 5;
+      return 10;
+    }
+    
+    // Handle wheel events (desktop)
+    element.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      clearBinauralSelections();
+      clearFrequencyLibrarySelection();
+      
+      const currentValue = chan[channel].value;
+      const increment = getIncrement(currentValue);
+      const delta = e.deltaY > 0 ? -increment : increment;
+      setValue(channel, currentValue + delta);
+    }, { passive: false });
+    
+    // Handle touch events (mobile)
+    element.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startValue = chan[channel].value;
+      element.style.transform = 'scale(0.98)';
+    }, { passive: false });
+    
+    element.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      
+      const currentY = e.touches[0].clientY;
+      const deltaY = startY - currentY; // Inverted for natural scroll direction
+      const sensitivity = 2; // Adjust sensitivity
+      const currentValue = chan[channel].value;
+      const increment = getIncrement(currentValue);
+      
+      // Smooth incremental changes
+      const steps = Math.floor(Math.abs(deltaY) / sensitivity);
+      if (steps > 0) {
+        const direction = deltaY > 0 ? 1 : -1;
+        const newValue = startValue + (steps * increment * direction);
+        setValue(channel, newValue);
+        startY = currentY; // Update start position for continuous scrolling
+        startValue = chan[channel].value;
+        
+        clearBinauralSelections();
+        clearFrequencyLibrarySelection();
+      }
+    }, { passive: false });
+    
+    element.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isDragging = false;
+      element.style.transform = 'scale(1)';
+    }, { passive: false });
+    
+    // Handle mouse events (desktop drag)
+    element.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.clientY;
+      startValue = chan[channel].value;
+      element.style.transform = 'scale(0.98)';
+      
+      // Add global mouse event listeners
+      const handleMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const currentY = e.clientY;
+        const deltaY = startY - currentY;
+        const sensitivity = 3;
+        const currentValue = chan[channel].value;
+        const increment = getIncrement(currentValue);
+        
+        const steps = Math.floor(Math.abs(deltaY) / sensitivity);
+        if (steps > 0) {
+          const direction = deltaY > 0 ? 1 : -1;
+          const newValue = startValue + (steps * increment * direction);
+          setValue(channel, newValue);
+          startY = currentY;
+          startValue = chan[channel].value;
+          
+          clearBinauralSelections();
+          clearFrequencyLibrarySelection();
+        }
+      };
+      
+      const handleMouseUp = (e) => {
+        e.preventDefault();
+        isDragging = false;
+        element.style.transform = 'scale(1)';
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+      
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+    
+    // Prevent context menu on long press
+    element.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+    });
+    
+    // Add click handlers for scroll indicators
+    const scrollUp = element.querySelector('.scroll-up');
+    const scrollDown = element.querySelector('.scroll-down');
+    
+    if (scrollUp) {
+      scrollUp.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearBinauralSelections();
+        clearFrequencyLibrarySelection();
+        const currentValue = chan[channel].value;
+        const increment = getIncrement(currentValue);
+        setValue(channel, currentValue + increment);
+        
+        // Visual feedback
+        scrollUp.style.transform = 'scale(1.3)';
+        setTimeout(() => {
+          scrollUp.style.transform = 'scale(1)';
+        }, 150);
+      });
+    }
+    
+    if (scrollDown) {
+      scrollDown.addEventListener('click', (e) => {
+        e.stopPropagation();
+        clearBinauralSelections();
+        clearFrequencyLibrarySelection();
+        const currentValue = chan[channel].value;
+        const increment = getIncrement(currentValue);
+        setValue(channel, currentValue - increment);
+        
+        // Visual feedback
+        scrollDown.style.transform = 'scale(1.3)';
+        setTimeout(() => {
+          scrollDown.style.transform = 'scale(1)';
+        }, 150);
+      });
+    }
+  }
+  
+  // Initialize scroll wheels
+  setupHzScrollWheel(hzWheelA, 'A');
+  setupHzScrollWheel(hzWheelB, 'B');
 
   // Gain sliders
   gA.oninput=()=>{ chan.A.gain=+gA.value/100; gainAVal.textContent=gA.value+'%'; if(gNodeA && isPlaying) gNodeA.gain.value=chan.A.gain; };
