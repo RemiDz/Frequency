@@ -541,38 +541,160 @@ h1{
   gap:12px
 }
 
-.hz-input{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:6px;
-  margin-bottom:0;
+/* Hz Scroll Wheel Design */
+.hz-scroll-wheel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25, 211, 197, 0.08);
+  border: 2px solid rgba(25, 211, 197, 0.3);
+  border-radius: 12px;
+  padding: 16px 12px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: pan-y;
+  min-height: 100px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.hz-input input[type=number]{
-  width:100px;
-  text-align:center;
-  font-size:14px;
-  font-weight:600;
-  padding:6px 8px;
-  min-height:40px; /* Touch-friendly minimum size */
+.hz-scroll-wheel:hover {
+  background: rgba(25, 211, 197, 0.12);
+  border-color: rgba(25, 211, 197, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 211, 197, 0.2);
+}
+
+.hz-scroll-wheel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), #15b8ab);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hz-scroll-wheel:hover::before {
+  opacity: 1;
+}
+
+.hz-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.hz-display span:first-child {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  font-family: 'Courier New', monospace;
+  text-shadow: 0 0 10px rgba(25, 211, 197, 0.3);
+}
+
+.hz-unit {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.scroll-indicators {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.hz-scroll-wheel:hover .scroll-indicators {
+  opacity: 1;
+}
+
+.scroll-up, .scroll-down {
+  font-size: 14px;
+  color: var(--accent);
+  text-align: center;
+  line-height: 1;
+  transition: all 0.2s ease;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.scroll-up:hover, .scroll-down:hover {
+  background: rgba(25, 211, 197, 0.2);
+  transform: scale(1.2);
+}
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+  .hz-scroll-wheel {
+    min-height: 120px;
+    padding: 20px 16px;
+    border-width: 3px;
+  }
+  
+  .hz-display span:first-child {
+    font-size: 24px;
+  }
+  
+  .hz-unit {
+    font-size: 14px;
+  }
+  
+  .scroll-indicators {
+    gap: 12px;
+  }
+  
+  .scroll-up, .scroll-down {
+    font-size: 18px;
+    padding: 8px;
+  }
 }
 
 @media(min-width:600px){
-  .hz-input input[type=number]{
-    width:120px;
-    font-size:15px;
-    padding:7px 10px;
-    min-height:42px;
+  .hz-scroll-wheel {
+    min-height: 110px;
+    padding: 18px 14px;
+  }
+  
+  .hz-display span:first-child {
+    font-size: 22px;
+  }
+  
+  .hz-unit {
+    font-size: 13px;
+  }
+  
+  .scroll-up, .scroll-down {
+    font-size: 16px;
   }
 }
 
 @media(min-width:768px){
-  .hz-input input[type=number]{
-    width:140px;
-    font-size:16px;
-    padding:8px 12px;
-    min-height:44px;
+  .hz-scroll-wheel {
+    min-height: 100px;
+    padding: 16px 12px;
+  }
+  
+  .hz-display span:first-child {
+    font-size: 20px;
+  }
+  
+  .hz-unit {
+    font-size: 12px;
+  }
+  
+  .scroll-up, .scroll-down {
+    font-size: 14px;
   }
 }
 
