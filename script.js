@@ -50,21 +50,15 @@
     ]
   };
 
-  const mapSelectA = document.getElementById('mapSelectA');
-  const mapSelectB = document.getElementById('mapSelectB');
-  const chakraBtnsA = document.getElementById('chakraBtnsA');
-  const chakraBtnsB = document.getElementById('chakraBtnsB');
+  const masterMapSelect = document.getElementById('masterMapSelect');
+  const masterChakraBtns = document.getElementById('masterChakraBtns');
 
-  // Store individual chakra mappings for each channel
-  const channelMaps = {
-    A: 'standard',
-    B: 'standard'
-  };
+  // Store master chakra mapping for both channels
+  let masterChakraMap = 'standard';
 
-  function buildChakraButtons(channel){
-    const mapKey = channelMaps[channel];
-    const set = MAPS[mapKey];
-    const container = channel === 'A' ? chakraBtnsA : chakraBtnsB;
+  function buildMasterChakraButtons(){
+    const set = MAPS[masterChakraMap];
+    const container = masterChakraBtns;
     
     container.innerHTML='';
     for(const c of set){
@@ -72,343 +66,76 @@
       btn.textContent = c.name;
       btn.style.background = c.color;
       btn.style.color = '#fff';
-      btn.onclick = () => setValue(channel, c.freq);
-      btn.title = `${c.name}: ${c.freq} Hz`;
+      btn.onclick = () => {
+        // Clear other selections first
+        clearBinauralSelections();
+        clearFrequencyLibrarySelection();
+        
+        // Apply frequency to both channels
+        setValue('A', c.freq);
+        setValue('B', c.freq);
+        // Auto-start playing if not already playing
+        if (!isPlaying) {
+          document.getElementById('masterToggle').click();
+        }
+      };
+      btn.title = `${c.name}: ${c.freq} Hz - Apply to both channels`;
       container.appendChild(btn);
     }
   }
 
-  function buildAllChakraButtons(){
-    buildChakraButtons('A');
-    buildChakraButtons('B');
-  }
-
   // Channel state
   const chan = {
-    A:{ value:440, min:20, max:8000, gain:0.2, muted:false },
-    B:{ value:528, min:20, max:8000, gain:0.2, muted:false }
+    A:{ value:440, gain:0.2 },
+    B:{ value:528, gain:0.2 }
   };
 
   // Elements for A
-  const knobA=document.getElementById('knobA'), indA=document.getElementById('indicatorA'), scaleA=document.getElementById('scaleA');
   const hzInputA=document.getElementById('hzInputA');
-  const minA=document.getElementById('minA'), maxA=document.getElementById('maxA'), gA=document.getElementById('gainA');
-  const minAVal=document.getElementById('minAVal'), maxAVal=document.getElementById('maxAVal'), gainAVal=document.getElementById('gainAVal');
+  const gA=document.getElementById('gainA');
+  const gainAVal=document.getElementById('gainAVal');
   // Elements for B
-  const knobB=document.getElementById('knobB'), indB=document.getElementById('indicatorB'), scaleB=document.getElementById('scaleB');
   const hzInputB=document.getElementById('hzInputB');
-  const minB=document.getElementById('minB'), maxB=document.getElementById('maxB'), gB=document.getElementById('gainB');
-  const minBVal=document.getElementById('minBVal'), maxBVal=document.getElementById('maxBVal'), gainBVal=document.getElementById('gainBVal');
+  const gB=document.getElementById('gainB');
+  const gainBVal=document.getElementById('gainBVal');
 
-  // Build ticks
-  function buildTicks(scaleEl){
-    for(let i=0;i<=50;i++){ const el=document.createElement('div'); el.className='tick'; const a=-135+270*(i/50); el.style.transform=`translate(-50%,-50%) rotate(${a}deg) translate(0,-65px)`; scaleEl.appendChild(el); }
-  }
-  buildTicks(scaleA); buildTicks(scaleB);
 
-  // Mapping helpers
-  function valueToAngle(v,min,max){ const t=(Math.log(v)-Math.log(min))/(Math.log(max)-Math.log(min)); return -135+270*t; }
-  function angleToValue(a,min,max){ const t=(a+135)/270; return Math.exp(Math.log(min)+t*(Math.log(max)-Math.log(min))); }
+
+
 
   function setValue(which, v){
     const s = chan[which];
-    s.value = Math.max(s.min, Math.min(s.max, v));
+    s.value = Math.max(1, Math.min(20000, v));
+    console.log(`Setting ${which} to ${s.value} Hz`);
     if(which==='A'){ 
-      indA.style.transform=`translate(-50%,-100%) rotate(${valueToAngle(s.value,s.min,s.max)}deg)`; 
       hzInputA.value=s.value.toFixed(1); 
-      if(oscA) oscA.frequency.value=s.value;
-      updateFrequencyIndicator('A');
+      if(oscA) {
+        oscA.frequency.value=s.value;
+        console.log('Updated oscA frequency to', s.value);
+      }
     }
     else { 
-      indB.style.transform=`translate(-50%,-100%) rotate(${valueToAngle(s.value,s.min,s.max)}deg)`; 
       hzInputB.value=s.value.toFixed(1); 
-      if(oscB) oscB.frequency.value=s.value;
-      updateFrequencyIndicator('B');
+      if(oscB) {
+        oscB.frequency.value=s.value;
+        console.log('Updated oscB frequency to', s.value);
+      }
     }
   }
 
-  // Frequency Indicator Functions
-  function updateFrequencyIndicator(channel) {
-    const s = chan[channel];
-    const freqBar = document.getElementById(`freqBar${channel}`);
-    const freqMarker = document.getElementById(`freqMarker${channel}`);
-    const freqDisplay = document.getElementById(`freqDisplay${channel}`);
-    const freqHistory = document.getElementById(`freqHistory${channel}`);
-    
-    // Calculate position (logarithmic scale for better frequency distribution)
-    const minLog = Math.log(s.min);
-    const maxLog = Math.log(s.max);
-    const valueLog = Math.log(s.value);
-    const position = ((valueLog - minLog) / (maxLog - minLog)) * 100;
-    
-    // Update marker position and color
-    const therapeuticColor = getTherapeuticColor(s.value);
-    freqMarker.style.left = `${Math.max(0, Math.min(100, position))}%`;
-    freqMarker.style.background = therapeuticColor;
-    freqMarker.style.boxShadow = `0 0 12px ${therapeuticColor}`;
-    
-    // Update frequency display
-    freqDisplay.textContent = `${s.value.toFixed(1)} Hz`;
-    
-    // Update bar color based on current frequency
-    updateFrequencyBarColor(channel, s.value);
-    
-    // Add frequency trail effect
-    addFrequencyTrail(freqHistory, position, channel);
-    
-    // Update scale labels
-    updateFrequencyScale(channel);
-  }
-  
-  function addFrequencyTrail(historyContainer, position, channel) {
-    // Get current therapeutic color
-    const therapeuticColor = getTherapeuticColor(chan[channel].value);
-    
-    // Create trail element
-    const trail = document.createElement('div');
-    trail.className = 'freq-trail';
-    trail.style.left = `${position}%`;
-    trail.style.background = `rgba(${hexToRgb(therapeuticColor)}, 0.5)`;
-    historyContainer.appendChild(trail);
-    
-    // Remove trail after animation
-    setTimeout(() => {
-      if (trail.parentNode) {
-        trail.parentNode.removeChild(trail);
-      }
-    }, 2000);
-    
-    // Limit number of trails
-    const trails = historyContainer.children;
-    if (trails.length > 10) {
-      historyContainer.removeChild(trails[0]);
-    }
-  }
-  
-  function updateFrequencyScale(channel) {
-    const s = chan[channel];
-    const center = Math.sqrt(s.min * s.max); // Geometric mean for logarithmic scale
-    
-    document.getElementById(`freqScaleMin${channel}`).textContent = s.min;
-    document.getElementById(`freqScaleCenter${channel}`).textContent = center.toFixed(0);
-    document.getElementById(`freqScaleMax${channel}`).textContent = s.max;
-  }
-  
-  // Interactive frequency bar with smooth dragging
-  function setupFrequencyBarInteraction(channel) {
-    const freqBar = document.getElementById(`freqBar${channel}`);
-    let isDragging = false;
-    
-    function updateFrequencyFromPosition(e) {
-      const rect = freqBar.getBoundingClientRect();
-      const clickPosition = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-      
-      // Convert position to frequency (logarithmic)
-      const s = chan[channel];
-      const minLog = Math.log(s.min);
-      const maxLog = Math.log(s.max);
-      const newFreq = Math.exp(minLog + clickPosition * (maxLog - minLog));
-      
-      setValue(channel, newFreq);
-      updateFrequencyBarColor(channel, newFreq);
-    }
-    
-    // Mouse events for smooth dragging
-    freqBar.onmousedown = (e) => {
-      isDragging = true;
-      freqBar.style.cursor = 'grabbing';
-      updateFrequencyFromPosition(e);
-      e.preventDefault();
-    };
-    
-    document.onmousemove = (e) => {
-      if (isDragging) {
-        updateFrequencyFromPosition(e);
-      }
-    };
-    
-    document.onmouseup = () => {
-      if (isDragging) {
-        isDragging = false;
-        freqBar.style.cursor = 'pointer';
-      }
-    };
-    
-    // Touch events for mobile support with improved responsiveness
-    freqBar.ontouchstart = (e) => {
-      isDragging = true;
-      freqBar.style.cursor = 'grabbing';
-      const touch = e.touches[0];
-      updateFrequencyFromPosition(touch);
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    
-    document.ontouchmove = (e) => {
-      if (isDragging && e.touches[0]) {
-        updateFrequencyFromPosition(e.touches[0]);
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-    
-    document.ontouchend = (e) => {
-      if (isDragging) {
-        isDragging = false;
-        freqBar.style.cursor = 'pointer';
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    };
-  }
-  
-  // Update frequency bar color based on therapeutic frequency ranges
-  function updateFrequencyBarColor(channel, frequency) {
-    const freqBar = document.getElementById(`freqBar${channel}`);
-    const therapeuticColor = getTherapeuticColor(frequency);
-    
-    // Create gradient based on therapeutic color
-    const darkColor = adjustColor(therapeuticColor, -30); // Darker version
-    const lightColor = adjustColor(therapeuticColor, 15);  // Lighter version
-    
-    // Apply gradient background
-    freqBar.style.background = `linear-gradient(90deg, ${darkColor} 0%, ${therapeuticColor} 50%, ${lightColor} 100%)`;
-    freqBar.style.boxShadow = `inset 0 0 15px rgba(${hexToRgb(therapeuticColor)}, 0.2), 0 0 8px rgba(${hexToRgb(therapeuticColor)}, 0.15)`;
-  }
-  
-  // Get therapeutic color based on frequency range
-  function getTherapeuticColor(frequency) {
-    // Therapeutic frequency color mapping - calming and relaxing colors
-    if (frequency < 10) {
-      // Very low frequencies - deep calming purple/indigo
-      return interpolateColor('#2D1B69', '#4A148C', Math.min(frequency / 10, 1));
-    } else if (frequency < 40) {
-      // Delta/Theta waves - deep blue to soft purple (sleep/meditation)
-      return interpolateColor('#1565C0', '#5E35B1', (frequency - 10) / 30);
-    } else if (frequency < 100) {
-      // Alpha waves - calming blue to soft teal (relaxation)
-      return interpolateColor('#1976D2', '#00838F', (frequency - 40) / 60);
-    } else if (frequency < 300) {
-      // Low frequencies - soft teal to gentle green (grounding)
-      return interpolateColor('#00ACC1', '#43A047', (frequency - 100) / 200);
-    } else if (frequency < 600) {
-      // Mid frequencies - gentle green to soft amber (balance)
-      return interpolateColor('#66BB6A', '#FFB74D', (frequency - 300) / 300);
-    } else if (frequency < 1000) {
-      // Higher frequencies - soft amber to warm peach (focus)
-      return interpolateColor('#FFB74D', '#FF8A65', (frequency - 600) / 400);
-    } else {
-      // Very high frequencies - warm peach to soft coral (awareness)
-      const ratio = Math.min((frequency - 1000) / 2000, 1);
-      return interpolateColor('#FF8A65', '#F06292', ratio);
-    }
-  }
-  
-  // Interpolate between two hex colors
-  function interpolateColor(color1, color2, ratio) {
-    ratio = Math.max(0, Math.min(1, ratio)); // Clamp ratio between 0 and 1
-    
-    const hex1 = color1.replace('#', '');
-    const hex2 = color2.replace('#', '');
-    
-    const r1 = parseInt(hex1.substring(0, 2), 16);
-    const g1 = parseInt(hex1.substring(2, 4), 16);
-    const b1 = parseInt(hex1.substring(4, 6), 16);
-    
-    const r2 = parseInt(hex2.substring(0, 2), 16);
-    const g2 = parseInt(hex2.substring(2, 4), 16);
-    const b2 = parseInt(hex2.substring(4, 6), 16);
-    
-    const r = Math.round(r1 + (r2 - r1) * ratio);
-    const g = Math.round(g1 + (g2 - g1) * ratio);
-    const b = Math.round(b1 + (b2 - b1) * ratio);
-    
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-  }
-  
-  // Helper function to adjust color brightness
-  function adjustColor(hexColor, percent) {
-    const num = parseInt(hexColor.replace('#', ''), 16);
-    const amt = Math.round(2.55 * percent);
-    const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-    const G = Math.max(0, Math.min(255, (num >> 8 & 0x00FF) + amt));
-    const B = Math.max(0, Math.min(255, (num & 0x0000FF) + amt));
-    return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
-  }
-  
-  // Helper function to convert hex to RGB values
-  function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? 
-      `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
-      '25, 211, 197'; // fallback to accent color
-  }
 
-  function wireKnob(knobEl, which){
-    let dragging=false;
-    
-    // Pointer events for better touch support
-    knobEl.onpointerdown=e=>{
-      dragging=true;
-      knobEl.setPointerCapture(e.pointerId);
-      e.preventDefault(); // Prevent scrolling on touch
-    };
-    
-    knobEl.onpointerup=()=>{
-      dragging=false;
-    };
-    
-    knobEl.onpointermove=e=>{
-      if(!dragging) return;
-      e.preventDefault(); // Prevent scrolling on touch
-      const s=chan[which];
-      const r=knobEl.getBoundingClientRect();
-      const cx=r.left+r.width/2, cy=r.top+r.height/2;
-      const ang=Math.atan2(e.clientY-cy,e.clientX-cx)*180/Math.PI+90;
-      const clamped=Math.max(-135,Math.min(135,ang));
-      setValue(which, angleToValue(clamped, s.min, s.max));
-    };
-    
-    // Additional touch events for better mobile support
-    knobEl.ontouchstart=e=>{
-      dragging=true;
-      e.preventDefault();
-      const touch = e.touches[0];
-      const s=chan[which];
-      const r=knobEl.getBoundingClientRect();
-      const cx=r.left+r.width/2, cy=r.top+r.height/2;
-      const ang=Math.atan2(touch.clientY-cy,touch.clientX-cx)*180/Math.PI+90;
-      const clamped=Math.max(-135,Math.min(135,ang));
-      setValue(which, angleToValue(clamped, s.min, s.max));
-    };
-    
-    knobEl.ontouchmove=e=>{
-      if(!dragging) return;
-      e.preventDefault();
-      const touch = e.touches[0];
-      const s=chan[which];
-      const r=knobEl.getBoundingClientRect();
-      const cx=r.left+r.width/2, cy=r.top+r.height/2;
-      const ang=Math.atan2(touch.clientY-cy,touch.clientX-cx)*180/Math.PI+90;
-      const clamped=Math.max(-135,Math.min(135,ang));
-      setValue(which, angleToValue(clamped, s.min, s.max));
-    };
-    
-    knobEl.ontouchend=e=>{
-      dragging=false;
-      e.preventDefault();
-    };
-  }
-  wireKnob(knobA,'A'); wireKnob(knobB,'B');
+
+
 
   // Enhanced Audio graph with effects chains
   let actx, oscA, oscB, gNodeA, gNodeB, pannerA, pannerB, master, analyserA, analyserB, masterAnalyser;
   let effectsA = {}, effectsB = {};
   function ensureAudio(){
     if(!actx){
-      actx=new (window.AudioContext||window.webkitAudioContext)();
-      oscA=actx.createOscillator(); oscB=actx.createOscillator(); oscA.type='sine'; oscB.type='sine';
-      gNodeA=actx.createGain(); gNodeB=actx.createGain(); gNodeA.gain.value=0.0001; gNodeB.gain.value=0.0001;
+      try {
+        actx=new (window.AudioContext||window.webkitAudioContext)();
+        oscA=actx.createOscillator(); oscB=actx.createOscillator(); oscA.type='sine'; oscB.type='sine';
+        gNodeA=actx.createGain(); gNodeB=actx.createGain(); gNodeA.gain.value=0.0001; gNodeB.gain.value=0.0001;
       
       // Create stereo panners for left/right separation
       pannerA=actx.createStereoPanner(); pannerA.pan.value=-1; // Channel A to left speaker
@@ -421,26 +148,26 @@
       analyserB=actx.createAnalyser(); analyserB.fftSize=4096; analyserB.smoothingTimeConstant=0.1;
       masterAnalyser=actx.createAnalyser(); masterAnalyser.fftSize=4096; masterAnalyser.smoothingTimeConstant=0.1;
       
-      // Setup basic effects chains
-      setupBasicEffects();
+      // Setup filter nodes
+      setupFilters();
       
-      // Connect with effects chains and stereo separation
+      // Connect with filter chains and stereo separation
       oscA.connect(gNodeA); oscB.connect(gNodeB);
       
-      // Route through effects chains
-      if (effectsA.input && effectsA.output) {
-        gNodeA.connect(effectsA.input);
-        effectsA.output.connect(analyserA);
-        effectsA.output.connect(pannerA);
+      // Route through filter chains
+      if (effectsA.filter) {
+        gNodeA.connect(effectsA.filter);
+        effectsA.filter.connect(analyserA);
+        effectsA.filter.connect(pannerA);
       } else {
         gNodeA.connect(analyserA);
         gNodeA.connect(pannerA);
       }
       
-      if (effectsB.input && effectsB.output) {
-        gNodeB.connect(effectsB.input);
-        effectsB.output.connect(analyserB);
-        effectsB.output.connect(pannerB);
+      if (effectsB.filter) {
+        gNodeB.connect(effectsB.filter);
+        effectsB.filter.connect(analyserB);
+        effectsB.filter.connect(pannerB);
       } else {
         gNodeB.connect(analyserB);
         gNodeB.connect(pannerB);
@@ -450,126 +177,84 @@
       master.connect(masterAnalyser); // Master analyser for beat detection
       master.connect(actx.destination);
       
-      oscA.start(); oscB.start();
-      // Init freqs
-      oscA.frequency.value=chan.A.value; oscB.frequency.value=chan.B.value;
+        oscA.start(); oscB.start();
+        // Init freqs
+        oscA.frequency.value=chan.A.value; oscB.frequency.value=chan.B.value;
+        console.log('Audio context initialized successfully');
+      } catch (e) {
+        console.error('Failed to initialize audio context:', e);
+      }
     }
   }
 
-  // Setup basic effects chains
-  function setupBasicEffects() {
+  // Setup filter nodes
+  function setupFilters() {
     try {
-      // Effects for Channel A
-      effectsA.input = actx.createGain();
+      // Filter for Channel A
       effectsA.filter = actx.createBiquadFilter();
-      effectsA.delay = actx.createDelay(1.0);
-      effectsA.delayGain = actx.createGain();
-      effectsA.delayFeedback = actx.createGain();
-      effectsA.reverbGain = actx.createGain();
-      effectsA.chorusGain = actx.createGain();
-      effectsA.output = actx.createGain();
-      
-      // Set default values
       effectsA.filter.type = 'allpass';
       effectsA.filter.frequency.value = 2000;
-      effectsA.delay.delayTime.value = 0.25;
-      effectsA.delayGain.gain.value = 0;
-      effectsA.delayFeedback.gain.value = 0.3;
-      effectsA.reverbGain.gain.value = 0;
-      effectsA.chorusGain.gain.value = 0;
       
-      // Connect effects chain A
-      effectsA.input.connect(effectsA.filter);
-      effectsA.filter.connect(effectsA.delay);
-      effectsA.delay.connect(effectsA.delayGain);
-      effectsA.delay.connect(effectsA.delayFeedback);
-      effectsA.delayFeedback.connect(effectsA.delay);
-      
-      // Mix to output
-      effectsA.filter.connect(effectsA.output); // Dry signal
-      effectsA.delayGain.connect(effectsA.output); // Delay signal
-      
-      // Effects for Channel B (same setup)
-      effectsB.input = actx.createGain();
+      // Filter for Channel B
       effectsB.filter = actx.createBiquadFilter();
-      effectsB.delay = actx.createDelay(1.0);
-      effectsB.delayGain = actx.createGain();
-      effectsB.delayFeedback = actx.createGain();
-      effectsB.reverbGain = actx.createGain();
-      effectsB.chorusGain = actx.createGain();
-      effectsB.output = actx.createGain();
-      
-      // Set default values
       effectsB.filter.type = 'allpass';
       effectsB.filter.frequency.value = 2000;
-      effectsB.delay.delayTime.value = 0.25;
-      effectsB.delayGain.gain.value = 0;
-      effectsB.delayFeedback.gain.value = 0.3;
-      effectsB.reverbGain.gain.value = 0;
-      effectsB.chorusGain.gain.value = 0;
-      
-      // Connect effects chain B
-      effectsB.input.connect(effectsB.filter);
-      effectsB.filter.connect(effectsB.delay);
-      effectsB.delay.connect(effectsB.delayGain);
-      effectsB.delay.connect(effectsB.delayFeedback);
-      effectsB.delayFeedback.connect(effectsB.delay);
-      
-      // Mix to output
-      effectsB.filter.connect(effectsB.output); // Dry signal
-      effectsB.delayGain.connect(effectsB.output); // Delay signal
       
     } catch (e) {
-      console.warn('Effects setup failed:', e);
-      // Fallback: direct connection
-      effectsA = { input: null, output: null };
-      effectsB = { input: null, output: null };
+      console.warn('Filter setup failed:', e);
+      // Fallback: no filters
+      effectsA = {};
+      effectsB = {};
     }
   }
 
-  // Play/Stop/Mute buttons
-  document.getElementById('playA').onclick=()=>{ ensureAudio(); gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05); };
-  document.getElementById('stopA').onclick=()=>{ if(gNodeA) gNodeA.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05); };
-  document.getElementById('muteA').onclick=()=>{ chan.A.muted=!chan.A.muted; if(gNodeA) gNodeA.gain.value = chan.A.muted? 0.0001 : chan.A.gain; };
 
-  document.getElementById('playB').onclick=()=>{ ensureAudio(); gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05); };
-  document.getElementById('stopB').onclick=()=>{ if(gNodeB) gNodeB.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05); };
-  document.getElementById('muteB').onclick=()=>{ chan.B.muted=!chan.B.muted; if(gNodeB) gNodeB.gain.value = chan.B.muted? 0.0001 : chan.B.gain; };
 
   // Hz input handlers
-  hzInputA.oninput=()=>{ setValue('A', +hzInputA.value); };
-  hzInputB.oninput=()=>{ setValue('B', +hzInputB.value); };
-
-  // Sliders
-  minA.oninput=()=>{ chan.A.min=+minA.value; minAVal.textContent=minA.value; setValue('A', chan.A.value); updateFrequencyScale('A'); };
-  maxA.oninput=()=>{ chan.A.max=+maxA.value; maxAVal.textContent=maxA.value; setValue('A', chan.A.value); updateFrequencyScale('A'); };
-  gA.oninput=()=>{ chan.A.gain=+gA.value/100; gainAVal.textContent=gA.value+'%'; if(gNodeA && !chan.A.muted) gNodeA.gain.value=chan.A.gain; };
-
-  minB.oninput=()=>{ chan.B.min=+minB.value; minBVal.textContent=minB.value; setValue('B', chan.B.value); updateFrequencyScale('B'); };
-  maxB.oninput=()=>{ chan.B.max=+maxB.value; maxBVal.textContent=maxB.value; setValue('B', chan.B.value); updateFrequencyScale('B'); };
-  gB.oninput=()=>{ chan.B.gain=+gB.value/100; gainBVal.textContent=gB.value+'%'; if(gNodeB && !chan.B.muted) gNodeB.gain.value=chan.B.gain; };
-
-  // Wave type controls
-  document.getElementById('waveTypeA').onchange = (e) => {
-    if (oscA) oscA.type = e.target.value;
+  hzInputA.oninput=()=>{ 
+    clearBinauralSelections();
+    clearFrequencyLibrarySelection();
+    setValue('A', +hzInputA.value); 
   };
-  
-  document.getElementById('waveTypeB').onchange = (e) => {
+  hzInputB.oninput=()=>{ 
+    clearBinauralSelections();
+    clearFrequencyLibrarySelection();
+    setValue('B', +hzInputB.value); 
+  };
+
+  // Gain sliders
+  gA.oninput=()=>{ chan.A.gain=+gA.value/100; gainAVal.textContent=gA.value+'%'; if(gNodeA && isPlaying) gNodeA.gain.value=chan.A.gain; };
+  gB.oninput=()=>{ chan.B.gain=+gB.value/100; gainBVal.textContent=gB.value+'%'; if(gNodeB && isPlaying) gNodeB.gain.value=chan.B.gain; };
+
+  // Master wave type control
+  document.getElementById('masterWaveType').onchange = (e) => {
+    if (oscA) oscA.type = e.target.value;
     if (oscB) oscB.type = e.target.value;
   };
 
   // Master Controls
   let masterGainValue = 1.0;
+  let isPlaying = false;
   
-  document.getElementById('masterPlay').onclick = () => {
-    ensureAudio();
-    document.getElementById('playA').click();
-    document.getElementById('playB').click();
-  };
-  
-  document.getElementById('masterStop').onclick = () => {
-    document.getElementById('stopA').click();
-    document.getElementById('stopB').click();
+  document.getElementById('masterToggle').onclick = () => {
+    const toggleBtn = document.getElementById('masterToggle');
+    
+    if (!isPlaying) {
+      // Start playing
+      ensureAudio();
+      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
+      toggleBtn.textContent = '⏸ Stop';
+      toggleBtn.classList.add('playing');
+      isPlaying = true;
+    } else {
+      // Stop playing
+      if(gNodeA) gNodeA.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05);
+      if(gNodeB) gNodeB.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05);
+      toggleBtn.textContent = '▶ Play';
+      toggleBtn.classList.remove('playing');
+      isPlaying = false;
+    }
   };
   
   document.getElementById('masterGain').oninput = (e) => {
@@ -580,147 +265,61 @@
     }
   };
 
-  // Mapping selectors
-  mapSelectA.onchange = () => {
-    channelMaps.A = mapSelectA.value;
-    buildChakraButtons('A');
+  // Master mapping selector
+  masterMapSelect.onchange = () => {
+    masterChakraMap = masterMapSelect.value;
+    buildMasterChakraButtons();
   };
   
-  mapSelectB.onchange = () => {
-    channelMaps.B = mapSelectB.value;
-    buildChakraButtons('B');
-  };
-  
-  buildAllChakraButtons();
+  buildMasterChakraButtons();
 
-  // Audio Effects Controls
-  
-  // Effects toggle functionality
-  document.getElementById('effectsToggleA').onclick = () => {
-    const controls = document.getElementById('effectsControlsA');
-    const button = document.getElementById('effectsToggleA');
-    if (controls.classList.contains('show')) {
-      controls.classList.remove('show');
-      button.textContent = 'Show';
-    } else {
-      controls.classList.add('show');
-      button.textContent = 'Hide';
+  // Clear binaural beat category selections
+  function clearBinauralSelections() {
+    const categorySelects = ['sleepSelect', 'meditationSelect', 'relaxationSelect', 'focusSelect', 'advancedSelect', 'therapeuticSelect'];
+    categorySelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        select.selectedIndex = 0; // Reset to first option (empty)
+      }
+    });
+    
+    const beatInfo = document.getElementById('beatInfo');
+    if (beatInfo) {
+      beatInfo.textContent = 'Select any brainwave state from the categories above to automatically set frequencies and start playing optimal binaural beats';
     }
-  };
+  }
   
-  document.getElementById('effectsToggleB').onclick = () => {
-    const controls = document.getElementById('effectsControlsB');
-    const button = document.getElementById('effectsToggleB');
-    if (controls.classList.contains('show')) {
-      controls.classList.remove('show');
-      button.textContent = 'Show';
-    } else {
-      controls.classList.add('show');
-      button.textContent = 'Hide';
+  // Clear frequency library selection
+  function clearFrequencyLibrarySelection() {
+    const freqPresetSelect = document.getElementById('freqPresetSelect');
+    if (freqPresetSelect) {
+      freqPresetSelect.selectedIndex = 0; // Reset to first option (empty)
     }
-  };
+    selectedFreqPreset = null;
+    
+    const freqInfo = document.getElementById('freqInfo');
+    if (freqInfo) {
+      freqInfo.textContent = 'Choose a frequency to automatically apply to both channels and start playing';
+    }
+  }
+  
+  // Reset form elements to default state on page load (simplified)
+  function resetFormElements() {
+    clearBinauralSelections();
+    clearFrequencyLibrarySelection();
+  }
+  
 
-  // Effects control handlers for Channel A
-  document.getElementById('reverbA').oninput = (e) => {
-    document.getElementById('reverbAVal').textContent = e.target.value + '%';
-    // Apply reverb effect (simplified for now)
-    if (effectsA.reverbGain) {
-      effectsA.reverbGain.gain.value = e.target.value / 100 * 0.5;
-    }
-  };
-  
-  document.getElementById('roomSizeA').oninput = (e) => {
-    document.getElementById('roomSizeAVal').textContent = e.target.value + '%';
-    // Room size affects reverb decay time
-  };
-  
-  document.getElementById('delayA').oninput = (e) => {
-    document.getElementById('delayAVal').textContent = e.target.value + '%';
-    if (effectsA.delayGain) {
-      effectsA.delayGain.gain.value = e.target.value / 100 * 0.3;
-    }
-  };
-  
-  document.getElementById('delayTimeA').oninput = (e) => {
-    document.getElementById('delayTimeAVal').textContent = e.target.value + 'ms';
-    if (effectsA.delay) {
-      effectsA.delay.delayTime.value = e.target.value / 1000;
-    }
-  };
-  
-  document.getElementById('filterTypeA').onchange = (e) => {
+
+  // Master filter control
+  document.getElementById('masterFilterType').onchange = (e) => {
+    const filterType = e.target.value === 'none' ? 'allpass' : e.target.value;
     if (effectsA.filter) {
-      effectsA.filter.type = e.target.value === 'none' ? 'allpass' : e.target.value;
+      effectsA.filter.type = filterType;
     }
-  };
-  
-  document.getElementById('filterFreqA').oninput = (e) => {
-    document.getElementById('filterFreqAVal').textContent = e.target.value + 'Hz';
-    if (effectsA.filter) {
-      effectsA.filter.frequency.value = e.target.value;
-    }
-  };
-  
-  document.getElementById('chorusA').oninput = (e) => {
-    document.getElementById('chorusAVal').textContent = e.target.value + '%';
-    if (effectsA.chorusGain) {
-      effectsA.chorusGain.gain.value = e.target.value / 100 * 0.3;
-    }
-  };
-  
-  document.getElementById('distortionA').oninput = (e) => {
-    document.getElementById('distortionAVal').textContent = e.target.value + '%';
-    // Apply distortion curve based on value
-  };
-
-  // Effects control handlers for Channel B (similar to A)
-  document.getElementById('reverbB').oninput = (e) => {
-    document.getElementById('reverbBVal').textContent = e.target.value + '%';
-    if (effectsB.reverbGain) {
-      effectsB.reverbGain.gain.value = e.target.value / 100 * 0.5;
-    }
-  };
-  
-  document.getElementById('roomSizeB').oninput = (e) => {
-    document.getElementById('roomSizeBVal').textContent = e.target.value + '%';
-  };
-  
-  document.getElementById('delayB').oninput = (e) => {
-    document.getElementById('delayBVal').textContent = e.target.value + '%';
-    if (effectsB.delayGain) {
-      effectsB.delayGain.gain.value = e.target.value / 100 * 0.3;
-    }
-  };
-  
-  document.getElementById('delayTimeB').oninput = (e) => {
-    document.getElementById('delayTimeBVal').textContent = e.target.value + 'ms';
-    if (effectsB.delay) {
-      effectsB.delay.delayTime.value = e.target.value / 1000;
-    }
-  };
-  
-  document.getElementById('filterTypeB').onchange = (e) => {
     if (effectsB.filter) {
-      effectsB.filter.type = e.target.value === 'none' ? 'allpass' : e.target.value;
+      effectsB.filter.type = filterType;
     }
-  };
-  
-  document.getElementById('filterFreqB').oninput = (e) => {
-    document.getElementById('filterFreqBVal').textContent = e.target.value + 'Hz';
-    if (effectsB.filter) {
-      effectsB.filter.frequency.value = e.target.value;
-    }
-  };
-  
-  document.getElementById('chorusB').oninput = (e) => {
-    document.getElementById('chorusBVal').textContent = e.target.value + '%';
-    if (effectsB.chorusGain) {
-      effectsB.chorusGain.gain.value = e.target.value / 100 * 0.3;
-    }
-  };
-  
-  document.getElementById('distortionB').oninput = (e) => {
-    document.getElementById('distortionBVal').textContent = e.target.value + '%';
   };
 
   // Spectrum + aura render for dual panels
@@ -737,9 +336,8 @@
   let beatHistory = [];
   let lastAmplitudeTime = 0;
 
-  function nearestChakra(f, channel){
-    const mapKey = channelMaps[channel];
-    const set = MAPS[mapKey];
+  function nearestChakra(f){
+    const set = MAPS[masterChakraMap];
     let best = set[0], d = Math.abs(f - best.freq);
     for(const c of set){
       const dc = Math.abs(f - c.freq);
@@ -755,7 +353,7 @@
 
   // Calculate beat frequency and amplitude modulation
   function calculateBeatInfo() {
-    if (!masterAnalyser || chan.A.muted || chan.B.muted) return { beatFreq: 0, amplitude: 0, modulation: 0 };
+    if (!masterAnalyser || !isPlaying) return { beatFreq: 0, amplitude: 0, modulation: 0 };
     
     // Calculate theoretical beat frequency
     const freqDiff = Math.abs(chan.A.value - chan.B.value);
@@ -793,8 +391,8 @@
     try {
       ctx.clearRect(0, 0, view.width, view.height);
       
-      const c = nearestChakra(chan.value, channelKey);
-      const gCur = chan.muted ? 0 : chan.gain;
+      const c = nearestChakra(chan.value);
+      const gCur = isPlaying ? chan.gain : 0;
       const t = performance.now() / 1000;
       
       // Basic aura pulsing (always works)
@@ -804,7 +402,7 @@
       try {
         const beatInfo = calculateBeatInfo();
         // Add beat frequency pulsing when both channels are active
-        if (!chan.A.muted && !chan.B.muted && beatInfo.beatFreq > 0.1) {
+        if (isPlaying && beatInfo.beatFreq > 0.1) {
           const beatPulse = 1 + beatInfo.modulation * 0.5 * Math.sin(t * beatInfo.beatFreq * 2 * Math.PI);
           pulse *= beatPulse;
         }
@@ -824,15 +422,17 @@
     // Hz scale
     ctx.fillStyle = '#445';
     ctx.font = '10px system-ui, sans-serif';
+    const minFreq = 20;
+    const maxFreq = 20000;
     for (let tick = 16; tick <= 16384; tick *= 2) {
-      if (tick < chan.min || tick > chan.max) continue;
-      const y = view.height - (tick - chan.min) / (chan.max - chan.min) * view.height;
+      if (tick < minFreq || tick > maxFreq) continue;
+      const y = view.height - (tick - minFreq) / (maxFreq - minFreq) * view.height;
       ctx.fillRect(0, y, 8, 1);
       ctx.fillText(`${tick}`, 10, y + 3);
     }
     
     // Current frequency line
-    const y = view.height - (chan.value - chan.min) / (chan.max - chan.min) * view.height;
+    const y = view.height - (chan.value - minFreq) / (maxFreq - minFreq) * view.height;
     ctx.strokeStyle = c.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -898,14 +498,14 @@
     
     // Enhanced HUD with beat frequency info
     let hudText = `${chan.value.toFixed(1)} Hz • ${c.name} • ${(chan.gain * 100).toFixed(0)}%`;
-    if (chan.muted) {
-      hudText += ' (Muted)';
+    if (!isPlaying) {
+      hudText += ' (Stopped)';
     }
     
     // Add beat frequency information when both channels are active (with error handling)
     try {
       const beatInfo = calculateBeatInfo();
-      if (!chan.A.muted && !chan.B.muted && beatInfo.beatFreq > 0.1) {
+      if (isPlaying && beatInfo.beatFreq > 0.1) {
         hudText += ` • Beat: ${beatInfo.beatFreq.toFixed(1)} Hz`;
         if (beatInfo.modulation > 0.1) {
           hudText += ` • Mod: ${(beatInfo.modulation * 100).toFixed(0)}%`;
@@ -920,8 +520,8 @@
       console.error('Error in drawChannel:', e);
       // Fallback: draw basic visualization
       ctx.clearRect(0, 0, view.width, view.height);
-      const c = nearestChakra(chan.value, channelKey);
-      const gCur = chan.muted ? 0 : chan.gain;
+      const c = nearestChakra(chan.value);
+      const gCur = isPlaying ? chan.gain : 0;
       
       // Simple aura
       const R = 150;
@@ -944,7 +544,7 @@
       const beatIndicator = document.getElementById('beatIndicator');
       const beatFreqDisplay = document.getElementById('beatFreqDisplay');
       
-      if (!chan.A.muted && !chan.B.muted && beatInfo.beatFreq > 0.1 && beatInfo.modulation > 0.05) {
+      if (isPlaying && beatInfo.beatFreq > 0.1 && beatInfo.modulation > 0.05) {
         beatIndicator.classList.add('active');
         beatFreqDisplay.textContent = `${beatInfo.beatFreq.toFixed(1)} Hz`;
         
@@ -978,19 +578,20 @@
     requestAnimationFrame(draw);
   }
 
-  // Initialize frequency indicators
-  setupFrequencyBarInteraction('A');
-  setupFrequencyBarInteraction('B');
+  // Set initial values and start visualization
+  setValue('A', chan.A.value); 
+  setValue('B', chan.B.value);
   
-  // Set initial indicator positions
-  setValue('A', chan.A.value); setValue('B', chan.B.value);
-  updateFrequencyScale('A');
-  updateFrequencyScale('B');
+  // Start the visualization loop
   draw();
+  
+  // Reset form elements on page load with proper timing
+  setTimeout(() => {
+    console.log('Calling resetFormElements');
+    resetFormElements();
+  }, 1000);
 
-  // Play/stop control buttons
-  document.getElementById('playA').addEventListener('click', ensureAudio);
-  document.getElementById('playB').addEventListener('click', ensureAudio);
+
 
   // Advanced Features Implementation
   
@@ -1021,8 +622,15 @@
         } else {
           // Timer finished - stop all sounds
           document.getElementById('timerPause').click();
-          document.getElementById('stopA').click();
-          document.getElementById('stopB').click();
+          if(gNodeA) gNodeA.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05);
+          if(gNodeB) gNodeB.gain.linearRampToValueAtTime(0.0001, actx.currentTime+0.05);
+          // Update master toggle button
+          const toggleBtn = document.getElementById('masterToggle');
+          if (toggleBtn) {
+            toggleBtn.textContent = '▶ Play';
+            toggleBtn.classList.remove('playing');
+            isPlaying = false;
+          }
           alert('Session complete! 🎵');
         }
       }, 1000);
@@ -1145,37 +753,54 @@
     }
   };
   
-  // Auto-apply and play when binaural beat selection changes
-  document.getElementById('brainwaveSelect').onchange = () => {
-    const selected = document.getElementById('brainwaveSelect').value;
+  // Function to handle binaural beat selection
+  function handleBinauralSelection(selected) {
+    console.log('Binaural selection:', selected);
     if (selected && brainwavePresets[selected]) {
+      // Clear frequency library selection
+      clearFrequencyLibrarySelection();
+      
       const preset = brainwavePresets[selected];
+      console.log('Applying preset:', preset);
       setValue('A', preset.base);
       setValue('B', preset.base + preset.beat);
       document.getElementById('beatInfo').textContent = preset.info;
       
       // Auto-start playing both channels
       ensureAudio();
-      document.getElementById('playA').click();
-      document.getElementById('playB').click();
+      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
+      
+      // Update master toggle button to show playing state
+      const toggleBtn = document.getElementById('masterToggle');
+      if (toggleBtn) {
+        toggleBtn.textContent = '⏸ Stop';
+        toggleBtn.classList.add('playing');
+        isPlaying = true;
+      }
+      
+      // Clear other category selections
+      const categorySelects = ['sleepSelect', 'meditationSelect', 'relaxationSelect', 'focusSelect', 'advancedSelect', 'therapeuticSelect'];
+      categorySelects.forEach(id => {
+        const select = document.getElementById(id);
+        if (select && select.value === selected) {
+          // Keep this one selected
+        } else if (select) {
+          select.value = '';
+        }
+      });
     }
-  };
+  }
+  
+  // Auto-apply and play when any category selection changes
+  document.getElementById('sleepSelect').onchange = (e) => handleBinauralSelection(e.target.value);
+  document.getElementById('meditationSelect').onchange = (e) => handleBinauralSelection(e.target.value);
+  document.getElementById('relaxationSelect').onchange = (e) => handleBinauralSelection(e.target.value);
+  document.getElementById('focusSelect').onchange = (e) => handleBinauralSelection(e.target.value);
+  document.getElementById('advancedSelect').onchange = (e) => handleBinauralSelection(e.target.value);
+  document.getElementById('therapeuticSelect').onchange = (e) => handleBinauralSelection(e.target.value);
 
-  // Keep the apply button for manual triggering if needed
-  document.getElementById('applyBrainwave').onclick = () => {
-    const selected = document.getElementById('brainwaveSelect').value;
-    if (selected && brainwavePresets[selected]) {
-      const preset = brainwavePresets[selected];
-      setValue('A', preset.base);
-      setValue('B', preset.base + preset.beat);
-      document.getElementById('beatInfo').textContent = preset.info;
-      
-      // Auto-start playing both channels
-      ensureAudio();
-      document.getElementById('playA').click();
-      document.getElementById('playB').click();
-    }
-  };
+
 
   // Frequency Library
   const frequencyPresets = {
@@ -1219,6 +844,9 @@
     const selected = e.target.value;
     selectedFreqPreset = selected;
     if (selected && frequencyPresets[selected]) {
+      // Clear binaural beat selections
+      clearBinauralSelections();
+      
       document.getElementById('freqInfo').textContent = frequencyPresets[selected].info;
       
       // Auto-apply to both channels and start playing
@@ -1228,31 +856,13 @@
       
       // Auto-start playing both channels
       ensureAudio();
-      document.getElementById('playA').click();
-      document.getElementById('playB').click();
+      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
     } else {
       document.getElementById('freqInfo').textContent = 'Choose a frequency to automatically apply to both channels and start playing';
     }
   };
   
-  document.getElementById('applyToA').onclick = () => {
-    if (selectedFreqPreset && frequencyPresets[selectedFreqPreset]) {
-      setValue('A', frequencyPresets[selectedFreqPreset].freq);
-    }
-  };
-  
-  document.getElementById('applyToB').onclick = () => {
-    if (selectedFreqPreset && frequencyPresets[selectedFreqPreset]) {
-      setValue('B', frequencyPresets[selectedFreqPreset].freq);
-    }
-  };
-  
-  document.getElementById('applyToBoth').onclick = () => {
-    if (selectedFreqPreset && frequencyPresets[selectedFreqPreset]) {
-      const freq = frequencyPresets[selectedFreqPreset].freq;
-      setValue('A', freq);
-      setValue('B', freq);
-    }
-  };
+
 
 })();
