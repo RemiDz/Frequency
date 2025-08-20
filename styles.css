@@ -541,6 +541,67 @@ h1{
   gap:12px
 }
 
+/* Hz Roller (vertical mouse wheel) */
+.hz-roller{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  user-select:none;
+  touch-action:pan-y;
+}
+
+.hz-roller .roller-frame{
+  width:80px;
+  height:140px;
+  padding:8px;
+  border-radius:12px;
+  background:linear-gradient(180deg,#428ad8,#285ea8);
+  box-shadow:inset 0 2px 2px rgba(255,255,255,0.25), inset 0 -3px 6px rgba(0,0,0,0.45);
+}
+
+.hz-roller .roller-slot{
+  width:100%;
+  height:100%;
+  border-radius:10px;
+  background:linear-gradient(180deg,#0b0f14,#0a0e13);
+  box-shadow:inset 0 14px 22px rgba(0,0,0,0.85), inset 0 -14px 22px rgba(0,0,0,0.85);
+  position:relative;
+  overflow:hidden;
+  cursor:grab;
+}
+
+.hz-roller .roller-slot:active{ cursor:grabbing; }
+
+.hz-roller .roller-wheel{
+  position:absolute;
+  left:8px;
+  right:8px;
+  top:-1000px; /* tall texture to allow scrolling */
+  height:2000px;
+  border-radius:12px;
+  background:
+    repeating-linear-gradient(90deg, #2a313a 0px, #2a313a 2px, #1f252c 2px, #1f252c 6px, #2a313a 6px, #2a313a 8px),
+    linear-gradient(180deg, #1b2128, #0f141a);
+  box-shadow:inset 0 0 14px rgba(0,0,0,0.65), 0 0 18px rgba(0,0,0,0.45);
+}
+
+.hz-roller .roller-gloss{
+  position:absolute;
+  top:0; left:0; right:0; bottom:0;
+  pointer-events:none;
+  background:linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 20%, rgba(255,255,255,0) 80%, rgba(255,255,255,0.08) 100%);
+}
+
+@media (max-width:767px){
+  .hz-roller .roller-frame{ width:96px; height:170px; }
+  .hz-roller .roller-wheel{ left:10px; right:10px; }
+}
+
+@media (min-width:600px) and (max-width:767px){
+  .hz-roller .roller-frame{ width:90px; height:155px; }
+}
+
 /* Hz Mouse Wheel Design */
 .hz-mouse-wheel {
   display: flex;
@@ -680,15 +741,7 @@ h1{
 }
 
 /* Rotation animation */
-.wheel-rotating {
-  animation: wheelSpin 0.2s ease-out;
-}
-
-@keyframes wheelSpin {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(5deg); }
-  100% { transform: rotate(0deg); }
-}
+/* Removed bounce animation to keep wheel rotation stable and deterministic */
 
 /* Mobile optimizations */
 @media (max-width: 767px) {
