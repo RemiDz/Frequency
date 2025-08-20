@@ -84,22 +84,18 @@
     }
   }
 
-  // Channel state
+  // Channel state (gain removed - now controlled by master gain only)
   const chan = {
-    A:{ value:440, gain:0.2 },
-    B:{ value:528, gain:0.2 }
+    A:{ value:440 },
+    B:{ value:528 }
   };
 
   // Elements for A
   const hzWheelA=document.getElementById('hzWheelA');
   const hzValueA=document.getElementById('hzValueA');
-  const gA=document.getElementById('gainA');
-  const gainAVal=document.getElementById('gainAVal');
   // Elements for B
   const hzWheelB=document.getElementById('hzWheelB');
   const hzValueB=document.getElementById('hzValueB');
-  const gB=document.getElementById('gainB');
-  const gainBVal=document.getElementById('gainBVal');
 
 
 
@@ -282,6 +278,12 @@
       if (wheelOffset > -100) wheelOffset = -1000;
       if (wheelOffset < -1900) wheelOffset = -1000;
       wheelBody.style.top = wheelOffset + 'px';
+      
+      // Add spinning animation for visual feedback
+      wheelBody.classList.add('spinning');
+      setTimeout(() => {
+        wheelBody.classList.remove('spinning');
+      }, 300);
     }
     
     // Play tick sound with throttling
@@ -408,10 +410,6 @@
   setupHzMouseWheel(hzWheelA, 'A');
   setupHzMouseWheel(hzWheelB, 'B');
 
-  // Gain sliders
-  gA.oninput=()=>{ chan.A.gain=+gA.value/100; gainAVal.textContent=gA.value+'%'; if(gNodeA && isPlaying) gNodeA.gain.value=chan.A.gain; };
-  gB.oninput=()=>{ chan.B.gain=+gB.value/100; gainBVal.textContent=gB.value+'%'; if(gNodeB && isPlaying) gNodeB.gain.value=chan.B.gain; };
-
   // Master wave type control
   document.getElementById('masterWaveType').onchange = (e) => {
     if (oscA) oscA.type = e.target.value;
@@ -428,8 +426,8 @@
     if (!isPlaying) {
       // Start playing
       ensureAudio();
-      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
-      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
+      gNodeA.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
       toggleBtn.textContent = '⏸ Stop';
       toggleBtn.classList.add('playing');
       isPlaying = true;
@@ -448,6 +446,11 @@
     document.getElementById('masterGainVal').textContent = e.target.value + '%';
     if (master) {
       master.gain.value = masterGainValue;
+    }
+    // Also update individual channel gains if playing
+    if (isPlaying) {
+      if (gNodeA) gNodeA.gain.value = masterGainValue;
+      if (gNodeB) gNodeB.gain.value = masterGainValue;
     }
   };
 
@@ -477,15 +480,18 @@
   
   // Clear frequency library selection
   function clearFrequencyLibrarySelection() {
-    const freqPresetSelect = document.getElementById('freqPresetSelect');
-    if (freqPresetSelect) {
-      freqPresetSelect.selectedIndex = 0; // Reset to first option (empty)
-    }
+    const categorySelects = ['solfeggioSelect', 'planetarySelect', 'healingSelect', 'musicalSelect', 'sacredSelect', 'brainwaveSelect'];
+    categorySelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select) {
+        select.selectedIndex = 0; // Reset to first option (empty)
+      }
+    });
     selectedFreqPreset = null;
     
     const freqInfo = document.getElementById('freqInfo');
     if (freqInfo) {
-      freqInfo.textContent = 'Choose a frequency to automatically apply to both channels and start playing';
+      freqInfo.textContent = 'Choose a frequency from any category to automatically apply to both channels and start playing';
     }
   }
   
@@ -578,7 +584,7 @@
       ctx.clearRect(0, 0, view.width, view.height);
       
       const c = nearestChakra(chan.value);
-      const gCur = isPlaying ? chan.gain : 0;
+      const gCur = isPlaying ? masterGainValue : 0;
       const t = performance.now() / 1000;
       
       // Basic aura pulsing (always works)
@@ -606,25 +612,36 @@
     ctx.fillRect(0, 0, view.width, view.height);
     
     // Hz scale
-    ctx.fillStyle = '#445';
+    ctx.fillStyle = 'rgba(25, 211, 197, 0.6)';
     ctx.font = '10px system-ui, sans-serif';
     const minFreq = 20;
     const maxFreq = 20000;
     for (let tick = 16; tick <= 16384; tick *= 2) {
       if (tick < minFreq || tick > maxFreq) continue;
       const y = view.height - (tick - minFreq) / (maxFreq - minFreq) * view.height;
-      ctx.fillRect(0, y, 8, 1);
-      ctx.fillText(`${tick}`, 10, y + 3);
+      ctx.fillRect(0, y, 12, 1);
+      ctx.fillText(`${tick}`, 15, y + 3);
     }
     
     // Current frequency line
     const y = view.height - (chan.value - minFreq) / (maxFreq - minFreq) * view.height;
-    ctx.strokeStyle = c.color;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(0, y);
     ctx.lineTo(view.width, y);
     ctx.stroke();
+    
+    // Add a colored glow line underneath
+    ctx.strokeStyle = c.color;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(view.width, y);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
     
     // Spectrum visualization (simplified and robust)
     if (analyser) {
@@ -660,8 +677,8 @@
         const timeData = channelKey === 'A' ? timeDataA : timeDataB;
         analyser.getFloatTimeDomainData(timeData);
         
-        ctx.strokeStyle = hexToRgba(c.color, 0.4);
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(25, 211, 197, 0.7)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         
         const sliceWidth = view.width / 512; // Use fewer samples for performance
@@ -683,7 +700,7 @@
     }
     
     // Enhanced HUD with beat frequency info
-    let hudText = `${chan.value.toFixed(1)} Hz • ${c.name} • ${(chan.gain * 100).toFixed(0)}%`;
+    let hudText = `${chan.value.toFixed(1)} Hz • ${c.name}`;
     if (!isPlaying) {
       hudText += ' (Stopped)';
     }
@@ -707,11 +724,11 @@
       // Fallback: draw basic visualization
       ctx.clearRect(0, 0, view.width, view.height);
       const c = nearestChakra(chan.value);
-      const gCur = isPlaying ? chan.gain : 0;
+      const gCur = isPlaying ? masterGainValue : 0;
       
       // Simple aura
       const R = 150;
-      const alpha = Math.min(1, 0.2 + gCur * 0.8);
+      const alpha = Math.min(1, 0.2 + masterGainValue * 0.8);
       const grd = ctx.createRadialGradient(view.width * 0.5, view.height * 0.5, 0, view.width * 0.5, view.height * 0.5, R);
       grd.addColorStop(0, hexToRgba(c.color, alpha));
       grd.addColorStop(1, hexToRgba('#000000', 0));
@@ -734,20 +751,20 @@
         beatIndicator.classList.add('active');
         beatFreqDisplay.textContent = `${beatInfo.beatFreq.toFixed(1)} Hz`;
         
-        // Pulse the beat indicator at the beat frequency
-        const t = performance.now() / 1000;
-        const pulse = 0.7 + 0.3 * Math.sin(t * beatInfo.beatFreq * 2 * Math.PI);
-        beatIndicator.style.transform = `scale(${pulse})`;
+        // Set pulse duration based on beat frequency
+        const pulseDuration = beatInfo.beatFreq > 0 ? (1 / beatInfo.beatFreq) : 1;
+        const beatDisplay = beatIndicator.querySelector('.beat-display');
+        if (beatDisplay) {
+          beatDisplay.style.setProperty('--beat-duration', `${pulseDuration}s`);
+        }
       } else {
         beatIndicator.classList.remove('active');
-        beatIndicator.style.transform = 'scale(1)';
       }
     } catch (e) {
       // Hide beat indicator if there's an error
       const beatIndicator = document.getElementById('beatIndicator');
       if (beatIndicator) {
         beatIndicator.classList.remove('active');
-        beatIndicator.style.transform = 'scale(1)';
       }
     }
     
@@ -954,8 +971,8 @@
       
       // Auto-start playing both channels
       ensureAudio();
-      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
-      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
+      gNodeA.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
       
       // Update master toggle button to show playing state
       const toggleBtn = document.getElementById('masterToggle');
@@ -988,50 +1005,90 @@
 
 
 
-  // Frequency Library
+  // Comprehensive Frequency Library
   const frequencyPresets = {
-    schumann: { 
-      freq: 7.83, 
-      info: 'Schumann Resonance - Earth\'s natural electromagnetic frequency. Promotes grounding and connection with nature.' 
-    },
-    om: { 
-      freq: 136.1, 
-      info: 'OM Frequency - Sacred sound in many traditions. Calculated from Earth\'s orbital frequency around the Sun.' 
-    },
-    golden: { 
-      freq: 1.618, 
-      info: 'Golden Ratio Frequency - Based on the mathematical golden ratio (φ). Promotes harmony and balance.' 
-    },
-    dna_repair: { 
-      freq: 528, 
-      info: 'DNA Repair Frequency - Part of Solfeggio scale. Believed to promote healing and DNA repair processes.' 
-    },
-    love: { 
-      freq: 528, 
-      info: 'Love Frequency - Known as the "Miracle Tone". Associated with love, healing, and transformation.' 
-    },
-    transformation: { 
-      freq: 741, 
-      info: 'Transformation Frequency - Solfeggio tone for cleansing and problem-solving. Awakens intuition.' 
-    },
-    intuition: { 
-      freq: 852, 
-      info: 'Intuition Frequency - Enhances spiritual awareness and returns to spiritual order.' 
-    },
-    pineal: { 
-      freq: 963, 
-      info: 'Pineal Activation - Highest Solfeggio frequency. Connects to divine consciousness and universal energy.' 
-    }
+    // Solfeggio Scale
+    ut_174: { freq: 174, info: 'Ut - 174 Hz - Foundation of conscious evolution. Reduces pain and stress, provides sense of security.' },
+    re_285: { freq: 285, info: 'Re - 285 Hz - Influences energy fields. Heals and regenerates tissues, enhances immune system.' },
+    mi_396: { freq: 396, info: 'Mi - 396 Hz - Liberates from fear and guilt. Transforms grief into joy, negative thoughts into positive.' },
+    fa_417: { freq: 417, info: 'Fa - 417 Hz - Facilitates change and undoing situations. Cleanses traumatic experiences and negative influences.' },
+    sol_528: { freq: 528, info: 'Sol - 528 Hz - Love frequency and DNA repair. Transforms and miracles, repairs genetic structure.' },
+    la_639: { freq: 639, info: 'La - 639 Hz - Connecting relationships. Enhances communication, love, understanding, and tolerance.' },
+    ti_741: { freq: 741, info: 'Ti - 741 Hz - Awakening intuition. Cleanses cells from toxins, electromagnetic radiation.' },
+    do_852: { freq: 852, info: 'Do - 852 Hz - Returning to spiritual order. Awakens intuition and helps return to spiritual order.' },
+    high_963: { freq: 963, info: 'High - 963 Hz - Divine connection. Activates pineal gland, connects with universal energy.' },
+    
+    // Planetary Frequencies
+    earth_day: { freq: 194.18, info: 'Earth Day - 194.18 Hz - Grounding and stability. Connects with Earth\'s daily rotation energy.' },
+    earth_year: { freq: 136.1, info: 'Earth Year - 136.1 Hz - OM frequency. Earth\'s orbital frequency around the Sun, cosmic connection.' },
+    moon: { freq: 210.42, info: 'Moon - 210.42 Hz - Intuition and emotional cycles. Lunar energy for feminine wisdom and intuition.' },
+    mercury: { freq: 141.27, info: 'Mercury - 141.27 Hz - Communication and intellect. Enhances mental clarity and expression.' },
+    venus: { freq: 221.23, info: 'Venus - 221.23 Hz - Love and beauty. Attracts love, harmony, and aesthetic appreciation.' },
+    mars: { freq: 144.72, info: 'Mars - 144.72 Hz - Energy and action. Increases willpower, strength, and determination.' },
+    jupiter: { freq: 183.58, info: 'Jupiter - 183.58 Hz - Growth and wisdom. Expands consciousness and promotes spiritual growth.' },
+    saturn: { freq: 147.85, info: 'Saturn - 147.85 Hz - Structure and discipline. Brings order, responsibility, and life lessons.' },
+    uranus: { freq: 207.36, info: 'Uranus - 207.36 Hz - Innovation and change. Promotes originality and sudden insights.' },
+    neptune: { freq: 211.44, info: 'Neptune - 211.44 Hz - Spirituality and dreams. Enhances psychic abilities and imagination.' },
+    pluto: { freq: 140.25, info: 'Pluto - 140.25 Hz - Transformation and rebirth. Deep psychological transformation and renewal.' },
+    
+    // Healing & Therapeutic
+    pain_relief_40: { freq: 40, info: 'Pain Relief - 40 Hz - Stimulates endorphin release. Natural pain management and comfort.' },
+    inflammation_728: { freq: 728, info: 'Anti-Inflammatory - 728 Hz - Reduces inflammation and swelling. Promotes healing processes.' },
+    immune_boost_465: { freq: 465, info: 'Immune Boost - 465 Hz - Strengthens immune system. Enhances body\'s natural defense mechanisms.' },
+    cellular_repair_285: { freq: 285, info: 'Cellular Repair - 285 Hz - Regenerates tissues and cells. Accelerates healing and recovery.' },
+    detox_727: { freq: 727.5, info: 'Detoxification - 727.5 Hz - Cleanses toxins from body. Supports liver and kidney function.' },
+    circulation_20: { freq: 20, info: 'Blood Circulation - 20 Hz - Improves blood flow. Enhances cardiovascular health and vitality.' },
+    muscle_relax_304: { freq: 304, info: 'Muscle Relaxation - 304 Hz - Releases muscle tension. Promotes physical relaxation and comfort.' },
+    nerve_regen_2720: { freq: 2720, info: 'Nerve Regeneration - 2720 Hz - Heals nervous system. Supports neural recovery and function.' },
+    
+    // Musical Notes (4th Octave)
+    c4: { freq: 261.63, info: 'C4 - 261.63 Hz - Root chakra tone. Grounding, stability, and foundation energy.' },
+    cs4: { freq: 277.18, info: 'C#4 - 277.18 Hz - Transition tone between root and sacral energies.' },
+    d4: { freq: 293.66, info: 'D4 - 293.66 Hz - Sacral chakra tone. Creativity, sexuality, and emotional balance.' },
+    ds4: { freq: 311.13, info: 'D#4 - 311.13 Hz - Transition tone enhancing creative expression.' },
+    e4: { freq: 329.63, info: 'E4 - 329.63 Hz - Solar plexus tone. Personal power, confidence, and self-esteem.' },
+    f4: { freq: 349.23, info: 'F4 - 349.23 Hz - Heart chakra tone. Love, compassion, and emotional healing.' },
+    fs4: { freq: 369.99, info: 'F#4 - 369.99 Hz - Heart-throat bridge. Emotional expression and communication.' },
+    g4: { freq: 392.00, info: 'G4 - 392.00 Hz - Throat chakra tone. Communication, truth, and self-expression.' },
+    gs4: { freq: 415.30, info: 'G#4 - 415.30 Hz - Throat-third eye bridge. Intuitive communication.' },
+    a4: { freq: 440.00, info: 'A4 - 440.00 Hz - Concert pitch standard. Universal tuning reference frequency.' },
+    as4: { freq: 466.16, info: 'A#4 - 466.16 Hz - Third eye preparation. Enhances perception and awareness.' },
+    b4: { freq: 493.88, info: 'B4 - 493.88 Hz - Crown chakra tone. Spiritual connection and enlightenment.' },
+    
+    // Sacred & Ancient
+    schumann: { freq: 7.83, info: 'Schumann Resonance - 7.83 Hz - Earth\'s natural electromagnetic frequency. Promotes grounding and connection with nature.' },
+    golden_ratio: { freq: 1.618, info: 'Golden Ratio - 1.618 Hz - Divine proportion frequency. Promotes harmony and natural balance.' },
+    fibonacci_89: { freq: 89, info: 'Fibonacci - 89 Hz - Natural harmony sequence. Resonates with organic growth patterns.' },
+    pyramid_51: { freq: 51.8, info: 'Great Pyramid - 51.8 Hz - Ancient wisdom frequency. Connects with pyramid energy and sacred geometry.' },
+    crystal_bowls_432: { freq: 432, info: 'Crystal Bowls - 432 Hz - Universal harmony. Natural tuning that resonates with cosmic frequencies.' },
+    tibetan_singing: { freq: 256, info: 'Tibetan Singing - 256 Hz - Meditation and mindfulness. Traditional frequency for spiritual practice.' },
+    om_chant: { freq: 136.1, info: 'OM Chant - 136.1 Hz - Sacred sound of creation. Universal vibration and cosmic consciousness.' },
+    angels_111: { freq: 111, info: 'Angel Frequency - 111 Hz - Divine connection and angelic communication. Spiritual guidance and protection.' },
+    
+    // Brainwave Entrainment
+    delta_1: { freq: 1, info: 'Delta - 1 Hz - Deep sleep and unconscious. Promotes profound rest and cellular regeneration.' },
+    delta_2: { freq: 2, info: 'Delta - 2 Hz - Healing sleep. Enhances natural healing processes during deep rest.' },
+    theta_4: { freq: 4, info: 'Theta - 4 Hz - Deep meditation and trance. Accesses subconscious mind and spiritual insights.' },
+    theta_6: { freq: 6, info: 'Theta - 6 Hz - Creativity and inspiration. Enhances artistic expression and innovative thinking.' },
+    alpha_8: { freq: 8, info: 'Alpha - 8 Hz - Relaxed awareness. Calm, peaceful state with enhanced learning ability.' },
+    alpha_10: { freq: 10, info: 'Alpha - 10 Hz - Calm focus and meditation. Balanced state of relaxed concentration.' },
+    beta_14: { freq: 14, info: 'Beta - 14 Hz - Focused concentration. Enhanced cognitive function and problem-solving.' },
+    beta_20: { freq: 20, info: 'Beta - 20 Hz - Active thinking and alertness. Peak mental performance and analytical thinking.' },
+    gamma_40: { freq: 40, info: 'Gamma - 40 Hz - Heightened awareness. Increased perception and consciousness binding.' },
+    gamma_70: { freq: 70, info: 'Gamma - 70 Hz - Cognitive enhancement. Advanced mental processing and expanded awareness.' }
   };
   
   let selectedFreqPreset = null;
   
-  document.getElementById('freqPresetSelect').onchange = (e) => {
-    const selected = e.target.value;
+  // Function to handle frequency selection from any category
+  function handleFrequencySelection(selected) {
+    console.log('Frequency selection:', selected);
     selectedFreqPreset = selected;
     if (selected && frequencyPresets[selected]) {
       // Clear binaural beat selections
       clearBinauralSelections();
+      // Clear other frequency category selections
+      clearOtherFrequencySelections(selected);
       
       document.getElementById('freqInfo').textContent = frequencyPresets[selected].info;
       
@@ -1042,12 +1099,39 @@
       
       // Auto-start playing both channels
       ensureAudio();
-      gNodeA.gain.linearRampToValueAtTime(chan.A.gain, actx.currentTime+0.05);
-      gNodeB.gain.linearRampToValueAtTime(chan.B.gain, actx.currentTime+0.05);
+      gNodeA.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
+      gNodeB.gain.linearRampToValueAtTime(masterGainValue, actx.currentTime+0.05);
+      
+      // Update master toggle button to show playing state
+      const toggleBtn = document.getElementById('masterToggle');
+      if (toggleBtn && !isPlaying) {
+        toggleBtn.textContent = '⏸ Stop';
+        toggleBtn.classList.add('playing');
+        isPlaying = true;
+      }
     } else {
-      document.getElementById('freqInfo').textContent = 'Choose a frequency to automatically apply to both channels and start playing';
+      document.getElementById('freqInfo').textContent = 'Choose a frequency from any category to automatically apply to both channels and start playing';
     }
-  };
+  }
+  
+  // Clear other frequency category selections when one is selected
+  function clearOtherFrequencySelections(currentSelection) {
+    const categorySelects = ['solfeggioSelect', 'planetarySelect', 'healingSelect', 'musicalSelect', 'sacredSelect', 'brainwaveSelect'];
+    categorySelects.forEach(id => {
+      const select = document.getElementById(id);
+      if (select && select.value !== currentSelection) {
+        select.value = '';
+      }
+    });
+  }
+  
+  // Add event handlers for all frequency categories
+  document.getElementById('solfeggioSelect').onchange = (e) => handleFrequencySelection(e.target.value);
+  document.getElementById('planetarySelect').onchange = (e) => handleFrequencySelection(e.target.value);
+  document.getElementById('healingSelect').onchange = (e) => handleFrequencySelection(e.target.value);
+  document.getElementById('musicalSelect').onchange = (e) => handleFrequencySelection(e.target.value);
+  document.getElementById('sacredSelect').onchange = (e) => handleFrequencySelection(e.target.value);
+  document.getElementById('brainwaveSelect').onchange = (e) => handleFrequencySelection(e.target.value);
   
 
 
