@@ -212,12 +212,56 @@
 
 
 
-  // Hz Scroll Wheel Implementation
-  function setupHzScrollWheel(element, channel) {
+  // Create ticking sound for wheel interaction
+  let tickAudioContext = null;
+  let tickGainNode = null;
+  
+  function createTickSound() {
+    if (!tickAudioContext) {
+      try {
+        tickAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        tickGainNode = tickAudioContext.createGain();
+        tickGainNode.connect(tickAudioContext.destination);
+        tickGainNode.gain.value = 0.1; // Soft volume
+      } catch (e) {
+        console.warn('Could not create tick audio context:', e);
+        return;
+      }
+    }
+    
+    try {
+      const oscillator = tickAudioContext.createOscillator();
+      const gainNode = tickAudioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(tickGainNode);
+      
+      // Create a soft tick sound
+      oscillator.frequency.value = 800; // High pitch tick
+      oscillator.type = 'sine';
+      
+      // Quick envelope for tick sound
+      const now = tickAudioContext.currentTime;
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.005);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      
+      oscillator.start(now);
+      oscillator.stop(now + 0.05);
+    } catch (e) {
+      // Silently fail if audio creation fails
+    }
+  }
+
+  // Hz Mouse Wheel Implementation
+  function setupHzMouseWheel(element, channel) {
     let startY = 0;
     let startValue = 0;
     let isDragging = false;
-    let animationFrame = null;
+    let lastTickTime = 0;
+    
+    const wheelBody = element.querySelector('.wheel-body');
+    let currentRotation = 0;
     
     // Calculate increment based on frequency range
     function getIncrement(currentValue) {
@@ -228,6 +272,30 @@
       return 10;
     }
     
+    // Animate wheel rotation
+    function animateWheelRotation(direction) {
+      const rotationAmount = direction > 0 ? 15 : -15;
+      currentRotation += rotationAmount;
+      
+      if (wheelBody) {
+        wheelBody.style.transform = `rotate(${currentRotation}deg)`;
+        wheelBody.classList.add('wheel-rotating');
+        
+        setTimeout(() => {
+          wheelBody.classList.remove('wheel-rotating');
+        }, 200);
+      }
+    }
+    
+    // Play tick sound with throttling
+    function playTick() {
+      const now = Date.now();
+      if (now - lastTickTime > 50) { // Throttle to max 20 ticks per second
+        createTickSound();
+        lastTickTime = now;
+      }
+    }
+    
     // Handle wheel events (desktop)
     element.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -236,8 +304,12 @@
       
       const currentValue = chan[channel].value;
       const increment = getIncrement(currentValue);
-      const delta = e.deltaY > 0 ? -increment : increment;
+      const direction = e.deltaY > 0 ? -1 : 1;
+      const delta = direction * increment;
+      
       setValue(channel, currentValue + delta);
+      animateWheelRotation(direction);
+      playTick();
     }, { passive: false });
     
     // Handle touch events (mobile)
@@ -255,7 +327,7 @@
       
       const currentY = e.touches[0].clientY;
       const deltaY = startY - currentY; // Inverted for natural scroll direction
-      const sensitivity = 2; // Adjust sensitivity
+      const sensitivity = 3; // Adjust sensitivity for mobile
       const currentValue = chan[channel].value;
       const increment = getIncrement(currentValue);
       
@@ -267,6 +339,9 @@
         setValue(channel, newValue);
         startY = currentY; // Update start position for continuous scrolling
         startValue = chan[channel].value;
+        
+        animateWheelRotation(direction);
+        playTick();
         
         clearBinauralSelections();
         clearFrequencyLibrarySelection();
@@ -294,7 +369,7 @@
         
         const currentY = e.clientY;
         const deltaY = startY - currentY;
-        const sensitivity = 3;
+        const sensitivity = 4;
         const currentValue = chan[channel].value;
         const increment = getIncrement(currentValue);
         
@@ -305,6 +380,9 @@
           setValue(channel, newValue);
           startY = currentY;
           startValue = chan[channel].value;
+          
+          animateWheelRotation(direction);
+          playTick();
           
           clearBinauralSelections();
           clearFrequencyLibrarySelection();
@@ -327,49 +405,11 @@
     element.addEventListener('contextmenu', (e) => {
       e.preventDefault();
     });
-    
-    // Add click handlers for scroll indicators
-    const scrollUp = element.querySelector('.scroll-up');
-    const scrollDown = element.querySelector('.scroll-down');
-    
-    if (scrollUp) {
-      scrollUp.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearBinauralSelections();
-        clearFrequencyLibrarySelection();
-        const currentValue = chan[channel].value;
-        const increment = getIncrement(currentValue);
-        setValue(channel, currentValue + increment);
-        
-        // Visual feedback
-        scrollUp.style.transform = 'scale(1.3)';
-        setTimeout(() => {
-          scrollUp.style.transform = 'scale(1)';
-        }, 150);
-      });
-    }
-    
-    if (scrollDown) {
-      scrollDown.addEventListener('click', (e) => {
-        e.stopPropagation();
-        clearBinauralSelections();
-        clearFrequencyLibrarySelection();
-        const currentValue = chan[channel].value;
-        const increment = getIncrement(currentValue);
-        setValue(channel, currentValue - increment);
-        
-        // Visual feedback
-        scrollDown.style.transform = 'scale(1.3)';
-        setTimeout(() => {
-          scrollDown.style.transform = 'scale(1)';
-        }, 150);
-      });
-    }
   }
   
-  // Initialize scroll wheels
-  setupHzScrollWheel(hzWheelA, 'A');
-  setupHzScrollWheel(hzWheelB, 'B');
+  // Initialize mouse wheels
+  setupHzMouseWheel(hzWheelA, 'A');
+  setupHzMouseWheel(hzWheelB, 'B');
 
   // Gain sliders
   gA.oninput=()=>{ chan.A.gain=+gA.value/100; gainAVal.textContent=gA.value+'%'; if(gNodeA && isPlaying) gNodeA.gain.value=chan.A.gain; };
